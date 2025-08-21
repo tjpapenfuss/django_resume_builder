@@ -1,0 +1,22 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Login Successful</title>
+</head>
+<body>
+    <h2>Login Successful!</h2>
+    <p>Welcome back, {{ user.first_name|default:user.email }}!</p>
+    
+    <div>
+        <p>You have successfully logged in.</p>
+        <p>Login Count: {{ user.login_count }}</p>
+        <p>Last Login: {{ user.last_login }}</p>
+    </div>
+    
+    <hr>
+    
+    <div>
+        <a href="{% url 'login' %}">Back to Login</a>
+    </div>
+</body>
+</html>

@@ -45,7 +45,7 @@ class UserCreateView(View):
             user, created = User.objects.get_or_create(
                 email=email, google_id=google_id,
                 defaults={
-                    'user_id': str(uuid.uuid4()),
+                    'user_id': uuid.uuid4(),
                     'email': email,  # Set username as email (can be modified as needed)
                     'first_name': first_name,
                     'last_name': last_name,

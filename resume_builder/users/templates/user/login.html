@@ -1,0 +1,20 @@
+<h2>Login</h2>
+<form method="post">
+    {% csrf_token %}
+    
+    {% if form.non_field_errors %}
+        <div style="color: red;">
+            {{ form.non_field_errors }}
+        </div>
+    {% endif %}
+    
+    {{ form.as_p }}
+    <button type="submit">Log In</button>
+</form>
+
+<hr>
+
+<p>Don't have an account?</p>
+<a href="{% url 'register' %}">
+    <button type="button">Create New User</button>
+</a>

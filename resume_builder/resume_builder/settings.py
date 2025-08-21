@@ -41,7 +41,7 @@ INSTALLED_APPS = [
     'django.contrib.sessions',
     'django.contrib.messages',
     'django.contrib.staticfiles',
-    'user',
+    'users',
 ]
 
 MIDDLEWARE = [
@@ -130,4 +130,13 @@ STATIC_URL = 'static/'
 
 DEFAULT_AUTO_FIELD = 'django.db.models.BigAutoField'
 
-AUTH_USER_MODEL = 'user.User'
+AUTH_USER_MODEL = 'users.User'
+
+AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend',
+]
+
+# Redirect to successful login page after login
+LOGIN_REDIRECT_URL = 'successful_login'  # or whatever URL name you want
+
+# Optional: Set logout redirect too
+LOGOUT_REDIRECT_URL = 'login'
