@@ -20,8 +20,6 @@ class UserRegistrationForm(forms.ModelForm):
             user.save()
         return user
 
-User = get_user_model()
-
 class CustomAuthenticationForm(forms.Form):
     email = forms.EmailField(
         widget=forms.EmailInput(attrs={'placeholder': 'Email'}),
@@ -56,3 +54,39 @@ class CustomAuthenticationForm(forms.Form):
 
     def get_user(self):
         return self.user_cache
+
+
+# Your existing forms...
+
+# NEW: Profile update form
+class UserProfileForm(forms.ModelForm):
+    class Meta:
+        model = User
+        fields = ['first_name', 'last_name', 'email', 'terms_and_conditions_accepted']
+        widgets = {
+            'first_name': forms.TextInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your first name'
+            }),
+            'last_name': forms.TextInput(attrs={
+                'class': 'form-control', 
+                'placeholder': 'Enter your last name'
+            }),
+            'email': forms.EmailInput(attrs={
+                'class': 'form-control',
+                'placeholder': 'Enter your email'
+            }),
+            'terms_and_conditions_accepted': forms.CheckboxInput(attrs={
+                'class': 'form-check-input'
+            })
+        }
+
+    def __init__(self, *args, **kwargs):
+        super().__init__(*args, **kwargs)
+        # Make email required
+        self.fields['email'].required = True
+        # Add labels
+        self.fields['first_name'].label = 'First Name'
+        self.fields['last_name'].label = 'Last Name'
+        self.fields['email'].label = 'Email Address'
+        self.fields['terms_and_conditions_accepted'].label = 'I accept the terms and conditions'

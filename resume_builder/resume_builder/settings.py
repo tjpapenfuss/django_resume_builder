@@ -136,7 +136,7 @@ AUTHENTICATION_BACKENDS = ['django.contrib.auth.backends.ModelBackend',
 ]
 
 # Redirect to successful login page after login
-LOGIN_REDIRECT_URL = 'successful_login'  # or whatever URL name you want
+LOGIN_REDIRECT_URL = 'profile'  # or whatever URL name you want
 
 # Optional: Set logout redirect too
 LOGOUT_REDIRECT_URL = 'login'

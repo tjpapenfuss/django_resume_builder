@@ -1,13 +1,12 @@
-from django.shortcuts import render, redirect
 from .forms import UserRegistrationForm
 from django.shortcuts import render, redirect
 from django.contrib.auth import authenticate, login
-from django.contrib.auth.decorators import login_required
 
-from django.shortcuts import render, redirect
-from django.contrib.auth import login
 from django.contrib import messages
-from .forms import UserRegistrationForm, CustomAuthenticationForm  # Import both forms
+from django.contrib.auth.decorators import login_required
+from .forms import UserRegistrationForm, CustomAuthenticationForm, UserProfileForm
+
+
 
 def register(request):
     if request.method == "POST":
@@ -19,19 +18,40 @@ def register(request):
         form = UserRegistrationForm()
     return render(request, "user/register.html", {"form": form})
 
+@login_required
+def profile_view(request):
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Your profile has been updated successfully!')
+            return redirect('profile')
+    else:
+        form = UserProfileForm(instance=request.user)
+    
+    return render(request, 'user/profile.html', {'form': form, 'user': request.user})
+
 
 def login_view(request):
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
+        
         if form.is_valid():
             user = form.get_user()
-            login(request, user)
-            return redirect('successful_login')
+            if user:
+                # Log the user in first
+                login(request, user)
+                
+                # Then increment login count
+                user.login_count += 1
+                user.save()
+                                
+                return redirect('profile')
+            else:
+                print("get_user() returned None")  # Debug
+        else:
+            print(f"Form errors: {form.errors}")  # Debug
     else:
         form = CustomAuthenticationForm()
     
-    return render(request, 'login.html', {'form': form})
-
-# Add this new view for successful login
-def successful_login_view(request):
-    return render(request, 'user/successful_login.html')
+    return render(request, 'user/login.html', {'form': form})
