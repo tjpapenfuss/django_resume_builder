@@ -1,0 +1,22 @@
+{% extends 'base.html' %}
+
+{% block title %}Home - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="demo-content">
+    <h1 class="page-title">Welcome to Resume Builder</h1>
+    <p class="page-description">
+        Create professional resumes with ease. Build, customize, and download your perfect resume in minutes.
+    </p>
+    
+    {% if user.is_authenticated %}
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{% url 'profile' %}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">Go to Profile</a>
+        </div>
+    {% else %}
+        <div style="text-align: center; margin-top: 30px;">
+            <a href="{% url 'login' %}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">Get Started</a>
+        </div>
+    {% endif %}
+</div>
+{% endblock %}

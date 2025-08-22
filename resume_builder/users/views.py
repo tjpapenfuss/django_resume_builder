@@ -1,22 +1,32 @@
 from .forms import UserRegistrationForm
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login
+from django.contrib.auth import authenticate, login, logout
 
 from django.contrib import messages
 from django.contrib.auth.decorators import login_required
 from .forms import UserRegistrationForm, CustomAuthenticationForm, UserProfileForm
-
-
+from django.contrib.auth.forms import UserCreationForm
 
 def register(request):
-    if request.method == "POST":
-        form = UserRegistrationForm(request.POST)
+    if request.method == 'POST':
+        form = UserCreationForm(request.POST)  # Or your custom form
         if form.is_valid():
-            form.save()
-            return redirect("login")  # redirect to login page or dashboard
+            user = form.save()
+            messages.success(request, 'Account created successfully!')
+            return redirect('login')
     else:
-        form = UserRegistrationForm()
-    return render(request, "user/register.html", {"form": form})
+        form = UserCreationForm()
+    return render(request, 'user/register.html', {'form': form})
+
+# def register(request):
+#     if request.method == "POST":
+#         form = UserRegistrationForm(request.POST)
+#         if form.is_valid():
+#             form.save()
+#             return redirect("login")  # redirect to login page or dashboard
+#     else:
+#         form = UserRegistrationForm()
+#     return render(request, "user/register.html", {"form": form})
 
 @login_required
 def profile_view(request):
@@ -30,7 +40,6 @@ def profile_view(request):
         form = UserProfileForm(instance=request.user)
     
     return render(request, 'user/profile.html', {'form': form, 'user': request.user})
-
 
 def login_view(request):
     if request.method == 'POST':
@@ -55,3 +64,10 @@ def login_view(request):
         form = CustomAuthenticationForm()
     
     return render(request, 'user/login.html', {'form': form})
+
+
+# Add this to your existing views
+def logout_view(request):
+    logout(request)
+    #messages.success(request, 'You have been successfully logged out.')
+    return redirect('login') 

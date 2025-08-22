@@ -1,14 +1,376 @@
-<!DOCTYPE html>
-<html>
-<head>
-    <title>Register</title>
-</head>
-<body>
-    <h2>Create a New Account</h2>
-    <form method="post">
-        {% csrf_token %}
-        {{ form.as_p }}
-        <button type="submit">Sign Up</button>
-    </form>
-</body>
-</html>
+{% extends 'base.html' %}
+
+{% block title %}Register - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Join Resume Builder</h1>
+        <p>Create your account and start building professional resumes in minutes</p>
+    </div>
+
+    <div class="form-section" style="max-width: 550px; margin: 0 auto;">
+        <h2>📝 Create New Account</h2>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-error">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <!-- Email Field - Handle different field names -->
+            {% if form.email %}
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">📧 {{ form.email.label|default:"Email Address" }}</label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="alert alert-error">{{ form.email.errors }}</div>
+                {% endif %}
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    We'll use this email for your login and important updates
+                </small>
+            </div>
+            {% elif form.username %}
+            <!-- Some forms use username field for email -->
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">📧 {{ form.username.label|default:"Email Address" }}</label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="alert alert-error">{{ form.username.errors }}</div>
+                {% endif %}
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    We'll use this email for your login and important updates
+                </small>
+            </div>
+            {% else %}
+            <!-- Fallback manual email field -->
+            <div class="form-group">
+                <label for="id_email">📧 Email Address</label>
+                <input type="email" name="email" id="id_email" required>
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    We'll use this email for your login and important updates
+                </small>
+            </div>
+            {% endif %}
+
+            <!-- First Name Field -->
+            {% if form.first_name %}
+            <div class="form-group">
+                <label for="{{ form.first_name.id_for_label }}">👤 {{ form.first_name.label }}</label>
+                {{ form.first_name }}
+                {% if form.first_name.errors %}
+                    <div class="alert alert-error">{{ form.first_name.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Last Name Field -->
+            {% if form.last_name %}
+            <div class="form-group">
+                <label for="{{ form.last_name.id_for_label }}">👤 {{ form.last_name.label }}</label>
+                {{ form.last_name }}
+                {% if form.last_name.errors %}
+                    <div class="alert alert-error">{{ form.last_name.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
+
+            <!-- Password Fields - Handle both Django UserCreationForm and custom forms -->
+            {% if form.password1 %}
+            <div class="form-group">
+                <label for="{{ form.password1.id_for_label }}">🔒 {{ form.password1.label|default:"Password" }}</label>
+                {{ form.password1 }}
+                {% if form.password1.errors %}
+                    <div class="alert alert-error">{{ form.password1.errors }}</div>
+                {% endif %}
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    Password must be at least 8 characters long
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password2.id_for_label }}">🔒 {{ form.password2.label|default:"Confirm Password" }}</label>
+                {{ form.password2 }}
+                {% if form.password2.errors %}
+                    <div class="alert alert-error">{{ form.password2.errors }}</div>
+                {% endif %}
+            </div>
+            {% elif form.password %}
+            <!-- Fallback for simple password field -->
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">🔒 {{ form.password.label|default:"Password" }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="alert alert-error">{{ form.password.errors }}</div>
+                {% endif %}
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    Password must be at least 8 characters long
+                </small>
+            </div>
+            {% else %}
+            <!-- Manual password fields if form doesn't have them -->
+            <div class="form-group">
+                <label for="id_password">🔒 Password</label>
+                <input type="password" name="password" id="id_password" required>
+                <small style="color: #6c757d; font-size: 12px; margin-top: 5px; display: block;">
+                    Password must be at least 8 characters long
+                </small>
+            </div>
+
+            <div class="form-group">
+                <label for="id_password_confirm">🔒 Confirm Password</label>
+                <input type="password" name="password_confirm" id="id_password_confirm" required>
+            </div>
+            {% endif %}
+
+            <!-- Terms and Conditions (if exists) -->
+            {% if form.terms_and_conditions_accepted %}
+            <div class="form-group">
+                <div class="checkbox-group">
+                    {{ form.terms_and_conditions_accepted }}
+                    <label for="{{ form.terms_and_conditions_accepted.id_for_label }}">
+                        {{ form.terms_and_conditions_accepted.label }}
+                    </label>
+                </div>
+                {% if form.terms_and_conditions_accepted.errors %}
+                    <div class="alert alert-error">{{ form.terms_and_conditions_accepted.errors }}</div>
+                {% endif %}
+                <small style="color: #6c757d; font-size: 12px; margin-top: 10px; display: block;">
+                    By creating an account, you agree to our Terms of Service and Privacy Policy
+                </small>
+            </div>
+            {% endif %}
+
+            <div class="actions" style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    🚀 Create Account
+                </button>
+            </div>
+        </form>
+
+        <div style="text-align: center; margin: 30px 0; position: relative;">
+            <hr style="border: none; height: 1px; background: linear-gradient(to right, transparent, #e9ecef, transparent);">
+            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #f8f9fa; padding: 0 20px; color: #6c757d; font-size: 14px;">
+                OR
+            </span>
+        </div>
+
+        <div style="text-align: center;">
+            <p style="color: #6c757d; margin-bottom: 20px; font-size: 16px;">
+                🔑 Already have an account?
+            </p>
+            <a href="{% url 'login' %}" class="btn btn-secondary" style="width: 100%; display: inline-block; text-align: center;">
+                🔐 Sign In Instead
+            </a>
+        </div>
+    </div>
+
+    <!-- Benefits Section -->
+    <div style="max-width: 700px; margin: 40px auto 0; text-align: center;">
+        <h3 style="color: #2c3e50; margin-bottom: 25px;">✨ Why Choose Resume Builder?</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 25px; margin-top: 25px;">
+            <div style="padding: 25px 20px; background: rgba(102, 126, 234, 0.08); border-radius: 15px; border: 1px solid rgba(102, 126, 234, 0.15);">
+                <div style="font-size: 32px; margin-bottom: 15px;">⚡</div>
+                <h4 style="color: #2c3e50; margin-bottom: 8px;">Fast & Easy</h4>
+                <p style="color: #6c757d; font-size: 14px; line-height: 1.5;">Create professional resumes in minutes with our intuitive builder</p>
+            </div>
+            <div style="padding: 25px 20px; background: rgba(102, 126, 234, 0.08); border-radius: 15px; border: 1px solid rgba(102, 126, 234, 0.15);">
+                <div style="font-size: 32px; margin-bottom: 15px;">🎨</div>
+                <h4 style="color: #2c3e50; margin-bottom: 8px;">Beautiful Templates</h4>
+                <p style="color: #6c757d; font-size: 14px; line-height: 1.5;">Choose from professionally designed templates that stand out</p>
+            </div>
+            <div style="padding: 25px 20px; background: rgba(102, 126, 234, 0.08); border-radius: 15px; border: 1px solid rgba(102, 126, 234, 0.15);">
+                <div style="font-size: 32px; margin-bottom: 15px;">🔒</div>
+                <h4 style="color: #2c3e50; margin-bottom: 8px;">Secure & Private</h4>
+                <p style="color: #6c757d; font-size: 14px; line-height: 1.5;">Your data is encrypted and securely stored with us</p>
+            </div>
+        </div>
+        
+        <!-- Trust Indicators -->
+        <div style="margin-top: 30px; padding: 20px; background: rgba(40, 167, 69, 0.08); border-radius: 12px; border: 1px solid rgba(40, 167, 69, 0.2);">
+            <div style="display: flex; align-items: center; justify-content: center; gap: 20px; flex-wrap: wrap;">
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #28a745; font-size: 18px;">✅</span>
+                    <span style="color: #28a745; font-weight: 600; font-size: 14px;">Free to Start</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #28a745; font-size: 18px;">✅</span>
+                    <span style="color: #28a745; font-weight: 600; font-size: 14px;">No Credit Card Required</span>
+                </div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="color: #28a745; font-size: 18px;">✅</span>
+                    <span style="color: #28a745; font-weight: 600; font-size: 14px;">Instant Access</span>
+                </div>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Additional styling for register page */
+    .form-group input, .form-group select {
+        font-size: 16px;
+        padding: 15px 18px;
+    }
+
+    .form-group input:focus, .form-group select:focus {
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+        border-color: #667eea;
+    }
+
+    .btn {
+        font-size: 16px;
+        padding: 15px 30px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+        transition: all 0.3s ease;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 8px 25px rgba(0, 0, 0, 0.15);
+    }
+
+    .checkbox-group {
+        background: rgba(102, 126, 234, 0.05);
+        padding: 15px;
+        border-radius: 10px;
+        border: 1px solid rgba(102, 126, 234, 0.1);
+    }
+
+    .checkbox-group input[type="checkbox"] {
+        margin-right: 10px;
+        transform: scale(1.2);
+    }
+
+    .checkbox-group label {
+        margin-bottom: 0;
+        cursor: pointer;
+        color: #2c3e50;
+        font-weight: 500;
+    }
+
+    /* Password strength indicator could be added here */
+    .password-strength {
+        height: 4px;
+        background: #e9ecef;
+        border-radius: 2px;
+        margin-top: 8px;
+        overflow: hidden;
+    }
+
+    .password-strength.weak { background: linear-gradient(90deg, #dc3545 30%, #e9ecef 30%); }
+    .password-strength.medium { background: linear-gradient(90deg, #ffc107 60%, #e9ecef 60%); }
+    .password-strength.strong { background: linear-gradient(90deg, #28a745 100%, #e9ecef 100%); }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .container {
+            margin: 20px 15px;
+            padding: 30px 20px;
+        }
+        
+        .form-section {
+            max-width: 100% !important;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            font-size: 14px;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+        }
+
+        .benefits-grid {
+            grid-template-columns: 1fr;
+        }
+    }
+
+    /* Form validation styling */
+    .form-group input.is-invalid {
+        border-color: #dc3545;
+        background-color: rgba(220, 53, 69, 0.05);
+    }
+
+    .form-group input.is-valid {
+        border-color: #28a745;
+        background-color: rgba(40, 167, 69, 0.05);
+    }
+</style>
+{% endblock %}
+
+{% block extra_js %}
+<script>
+    // Add some interactivity for better UX
+    document.addEventListener('DOMContentLoaded', function() {
+        // Email validation
+        const emailField = document.querySelector('input[type="email"]');
+        if (emailField) {
+            emailField.addEventListener('blur', function() {
+                const emailRegex = /^[^\s@]+@[^\s@]+\.[^\s@]+$/;
+                if (this.value && emailRegex.test(this.value)) {
+                    this.classList.remove('is-invalid');
+                    this.classList.add('is-valid');
+                } else if (this.value) {
+                    this.classList.remove('is-valid');
+                    this.classList.add('is-invalid');
+                }
+            });
+        }
+
+        // Password confirmation matching
+        const password1 = document.querySelector('input[name="password1"]');
+        const password2 = document.querySelector('input[name="password2"]');
+        
+        if (password1 && password2) {
+            password2.addEventListener('input', function() {
+                if (password1.value && password2.value) {
+                    if (password1.value === password2.value) {
+                        password2.classList.remove('is-invalid');
+                        password2.classList.add('is-valid');
+                    } else {
+                        password2.classList.remove('is-valid');
+                        password2.classList.add('is-invalid');
+                    }
+                }
+            });
+        }
+
+        // Simple password strength indicator
+        if (password1) {
+            password1.addEventListener('input', function() {
+                // You could add a password strength indicator here
+                const strength = calculatePasswordStrength(this.value);
+                // Update UI based on strength
+            });
+        }
+    });
+
+    function calculatePasswordStrength(password) {
+        let strength = 0;
+        if (password.length >= 8) strength++;
+        if (/[A-Z]/.test(password)) strength++;
+        if (/[a-z]/.test(password)) strength++;
+        if (/[0-9]/.test(password)) strength++;
+        if (/[^A-Za-z0-9]/.test(password)) strength++;
+        return strength;
+    }
+</script>
+{% endblock %}

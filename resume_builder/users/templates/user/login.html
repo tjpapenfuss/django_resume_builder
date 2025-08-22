@@ -1,20 +1,156 @@
-<h2>Login</h2>
-<form method="post">
-    {% csrf_token %}
-    
-    {% if form.non_field_errors %}
-        <div style="color: red;">
-            {{ form.non_field_errors }}
+{% extends 'base.html' %}
+
+{% block title %}Login - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Welcome Back</h1>
+        <p>Sign in to continue building your professional resume</p>
+    </div>
+
+    <div class="form-section" style="max-width: 500px; margin: 0 auto;">
+        <h2>🔐 Login</h2>
+
+        {% if form.non_field_errors %}
+            <div class="alert alert-error">
+                {{ form.non_field_errors }}
+            </div>
+        {% endif %}
+
+        {% if messages %}
+            {% for message in messages %}
+                <div class="alert alert-{{ message.tags }}">
+                    {{ message }}
+                </div>
+            {% endfor %}
+        {% endif %}
+
+        <form method="post">
+            {% csrf_token %}
+            
+            <div class="form-group">
+                <label for="{{ form.email.id_for_label }}">
+                    {% if 'email' in form.email.label|lower %}
+                        📧 {{ form.email.label }}
+                    {% else %}
+                        👤 {{ form.email.label }}
+                    {% endif %}
+                </label>
+                {{ form.email }}
+                {% if form.email.errors %}
+                    <div class="alert alert-error">{{ form.email.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-group">
+                <label for="{{ form.password.id_for_label }}">🔒 {{ form.password.label }}</label>
+                {{ form.password }}
+                {% if form.password.errors %}
+                    <div class="alert alert-error">{{ form.password.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="actions" style="margin-top: 30px;">
+                <button type="submit" class="btn btn-primary" style="width: 100%;">
+                    🚀 Log In
+                </button>
+            </div>
+        </form>
+
+        <div style="text-align: center; margin: 30px 0; position: relative;">
+            <hr style="border: none; height: 1px; background: linear-gradient(to right, transparent, #e9ecef, transparent);">
+            <span style="position: absolute; top: -10px; left: 50%; transform: translateX(-50%); background: #f8f9fa; padding: 0 20px; color: #6c757d; font-size: 14px;">
+                OR
+            </span>
         </div>
-    {% endif %}
-    
-    {{ form.as_p }}
-    <button type="submit">Log In</button>
-</form>
 
-<hr>
+        <div style="text-align: center;">
+            <p style="color: #6c757d; margin-bottom: 20px; font-size: 16px;">
+                ✨ Don't have an account yet?
+            </p>
+            <a href="{% url 'register' %}" class="btn btn-secondary" style="width: 100%; display: inline-block; text-align: center;">
+                📝 Create New Account
+            </a>
+        </div>
 
-<p>Don't have an account?</p>
-<a href="{% url 'register' %}">
-    <button type="button">Create New User</button>
-</a>
+        <!-- Optional: Forgot Password Link -->
+        <div style="text-align: center; margin-top: 20px;">
+            <a href="#" style="color: #667eea; text-decoration: none; font-size: 14px;">
+                🔄 Forgot your password?
+            </a>
+        </div>
+    </div>
+
+    <!-- Optional: Features Preview -->
+    <div style="max-width: 600px; margin: 40px auto 0; text-align: center;">
+        <h3 style="color: #2c3e50; margin-bottom: 20px;">🎯 What you can do with Resume Builder</h3>
+        <div style="display: grid; grid-template-columns: repeat(auto-fit, minmax(150px, 1fr)); gap: 20px; margin-top: 20px;">
+            <div style="padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 15px;">
+                <div style="font-size: 24px; margin-bottom: 10px;">📝</div>
+                <h4 style="color: #2c3e50; margin-bottom: 5px;">Create</h4>
+                <p style="color: #6c757d; font-size: 14px;">Build professional resumes</p>
+            </div>
+            <div style="padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 15px;">
+                <div style="font-size: 24px; margin-bottom: 10px;">🎨</div>
+                <h4 style="color: #2c3e50; margin-bottom: 5px;">Customize</h4>
+                <p style="color: #6c757d; font-size: 14px;">Multiple templates available</p>
+            </div>
+            <div style="padding: 20px; background: rgba(102, 126, 234, 0.1); border-radius: 15px;">
+                <div style="font-size: 24px; margin-bottom: 10px;">💾</div>
+                <h4 style="color: #2c3e50; margin-bottom: 5px;">Save</h4>
+                <p style="color: #6c757d; font-size: 14px;">Download and manage resumes</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+{% endblock %}
+
+{% block extra_css %}
+<style>
+    /* Additional styling for login page */
+    .form-group input {
+        font-size: 16px;
+        padding: 15px 18px;
+    }
+
+    .form-group input:focus {
+        box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+    }
+
+    .btn {
+        font-size: 16px;
+        padding: 15px 30px;
+        font-weight: 600;
+        border: none;
+        cursor: pointer;
+    }
+
+    .btn:hover {
+        transform: translateY(-2px);
+        box-shadow: 0 5px 15px rgba(0, 0, 0, 0.2);
+    }
+
+    /* Mobile responsiveness */
+    @media (max-width: 768px) {
+        .container {
+            margin: 20px 15px;
+            padding: 30px 20px;
+        }
+        
+        .form-section {
+            max-width: 100% !important;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            font-size: 14px;
+        }
+        
+        .header h1 {
+            font-size: 2em;
+        }
+    }
+</style>
+{% endblock %}

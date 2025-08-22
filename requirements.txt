@@ -4,3 +4,4 @@ asyncpg
 uvicorn
 python-dotenv
 psycopg[binary]
+djangorestframework
