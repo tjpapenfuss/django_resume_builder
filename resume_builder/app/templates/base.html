@@ -24,6 +24,52 @@
             position: sticky;
             top: 0;
             z-index: 1000;
+            transition: all 0.3s ease;
+        }
+
+        .banner.collapsed {
+            transform: translateY(-100%);
+        }
+
+        .banner.collapsed:hover,
+        .banner.collapsed:focus-within {
+            transform: translateY(-80%);
+        }
+
+        /* Collapse Toggle Button */
+        .collapse-toggle {
+            position: absolute;
+            bottom: -15px;
+            left: 50%;
+            transform: translateX(-50%);
+            background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+            border: none;
+            border-radius: 50%;
+            width: 30px;
+            height: 30px;
+            color: white;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            box-shadow: 0 2px 10px rgba(0, 0, 0, 0.2);
+            transition: all 0.3s ease;
+            z-index: 1001;
+        }
+
+        .collapse-toggle:hover {
+            transform: translateX(-50%) scale(1.1);
+            box-shadow: 0 4px 15px rgba(102, 126, 234, 0.4);
+        }
+
+        .collapse-toggle.collapsed {
+            bottom: -10px;
+            transform: translateX(-50%) rotate(180deg);
+        }
+
+        .collapse-toggle.collapsed:hover {
+            transform: translateX(-50%) rotate(180deg) scale(1.1);
         }
 
         .banner-container {
@@ -34,6 +80,151 @@
             justify-content: space-between;
             align-items: center;
             min-height: 70px;
+            position: relative;
+        }
+
+        /* Hamburger Menu Button - Always Visible */
+        .hamburger-menu {
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+            width: 30px;
+            height: 30px;
+            cursor: pointer;
+            background: none;
+            border: none;
+            padding: 0;
+            position: relative;
+            z-index: 1002;
+        }
+
+        .hamburger-line {
+            width: 100%;
+            height: 3px;
+            background: white;
+            margin: 2px 0;
+            transition: all 0.3s ease;
+            border-radius: 2px;
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(1) {
+            transform: rotate(45deg) translate(6px, 6px);
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(2) {
+            opacity: 0;
+        }
+
+        .hamburger-menu.active .hamburger-line:nth-child(3) {
+            transform: rotate(-45deg) translate(6px, -6px);
+        }
+
+        /* Slide-out Menu */
+        .nav-overlay {
+            position: fixed;
+            top: 0;
+            left: -100%;
+            width: 100%;
+            height: 100vh;
+            background: rgba(0, 0, 0, 0.5);
+            backdrop-filter: blur(5px);
+            transition: all 0.3s ease;
+            z-index: 1000;
+        }
+
+        .nav-overlay.active {
+            left: 0;
+        }
+
+        .nav-sidebar {
+            position: fixed;
+            top: 0;
+            left: -320px;
+            width: 320px;
+            height: 100vh;
+            background: linear-gradient(135deg, #2c3e50 0%, #34495e 100%);
+            box-shadow: 5px 0 20px rgba(0, 0, 0, 0.3);
+            transition: all 0.3s ease;
+            z-index: 1001;
+            overflow-y: auto;
+        }
+
+        .nav-sidebar.active {
+            left: 0;
+        }
+
+        .nav-header {
+            padding: 30px 25px 20px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-header .logo {
+            font-size: 1.4em;
+            margin-bottom: 10px;
+        }
+
+        .nav-user-info {
+            color: rgba(255, 255, 255, 0.8);
+            font-size: 14px;
+        }
+
+        .nav-menu {
+            padding: 20px 0;
+        }
+
+        .nav-section {
+            margin-bottom: 30px;
+        }
+
+        .nav-section-title {
+            color: rgba(255, 255, 255, 0.6);
+            font-size: 12px;
+            font-weight: 600;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            padding: 0 25px 10px;
+            margin-bottom: 10px;
+            border-bottom: 1px solid rgba(255, 255, 255, 0.1);
+        }
+
+        .nav-item {
+            display: block;
+            color: rgba(255, 255, 255, 0.9);
+            text-decoration: none;
+            padding: 15px 25px;
+            transition: all 0.3s ease;
+            border-left: 3px solid transparent;
+            font-weight: 500;
+        }
+
+        .nav-item:hover {
+            background: rgba(255, 255, 255, 0.1);
+            color: white;
+            border-left-color: #667eea;
+        }
+
+        .nav-item.active {
+            background: rgba(102, 126, 234, 0.2);
+            color: white;
+            border-left-color: #667eea;
+        }
+
+        .nav-item-icon {
+            display: inline-block;
+            width: 24px;
+            text-align: center;
+            margin-right: 15px;
+            font-size: 16px;
+        }
+
+        /* Hide original navigation */
+        .nav {
+            display: none;
+        }
+
+        /* Mobile Menu Button - Hide */
+        .mobile-menu-btn {
+            display: none;
         }
 
         /* Logo Section */
@@ -346,31 +537,9 @@
                 min-height: 60px;
             }
 
-            .nav {
-                display: none;
-                position: absolute;
-                top: 100%;
-                left: 0;
-                right: 0;
-                background: #2c3e50;
-                flex-direction: column;
-                gap: 0;
-                padding: 20px;
-            }
-
-            .nav.active {
-                display: flex;
-            }
-
-            .nav-link {
-                width: 100%;
-                text-align: center;
-                padding: 15px 20px;
-                border-radius: 10px;
-            }
-
-            .mobile-menu-btn {
-                display: block;
+            .nav-sidebar {
+                width: 280px;
+                left: -280px;
             }
 
             .user-section {
@@ -406,29 +575,30 @@
             .actions {
                 flex-direction: column;
             }
+
+            .collapse-toggle {
+                display: none; /* Hide collapse button on mobile */
+            }
         }
     </style>
     {% block extra_css %}{% endblock %}
 </head>
 <body>
     <!-- Banner Component -->
-    <header class="banner">
+    <header class="banner" id="banner">
         <div class="banner-container">
+            <!-- Hamburger Menu Button -->
+            <button class="hamburger-menu" id="hamburgerMenu" onclick="toggleNavMenu()">
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+                <div class="hamburger-line"></div>
+            </button>
+
             <!-- Logo -->
             <a href="{% url 'home' %}" class="logo">
                 <div class="logo-icon">📄</div>
                 <span>Resume Builder</span>
             </a>
-
-            <!-- Navigation -->
-            <nav class="nav" id="nav">
-                <a href="{% url 'home' %}" class="nav-link {% if request.resolver_match.url_name == 'home' %}active{% endif %}">🏠 Home</a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'profile' %}" class="nav-link {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">👤 Profile</a>
-                    <a href="#" class="nav-link">📝 Create Resume</a>
-                    <a href="#" class="nav-link">📋 My Resumes</a>
-                {% endif %}
-            </nav>
 
             <!-- User Section -->
             <div class="user-section">
@@ -445,11 +615,105 @@
                     <a href="{% url 'login' %}" class="logout-btn">Login</a>
                 {% endif %}
             </div>
-
-            <!-- Mobile Menu Button -->
-            <button class="mobile-menu-btn" onclick="toggleMobileMenu()">☰</button>
         </div>
+        
+        <!-- Collapse Toggle Button -->
+        <button class="collapse-toggle" id="collapseToggle" onclick="toggleBannerCollapse()" title="Collapse/Expand Navigation">
+            ▲
+        </button>
     </header>
+
+    <!-- Slide-out Navigation Menu -->
+    <div class="nav-overlay" id="navOverlay" onclick="closeNavMenu()"></div>
+    <nav class="nav-sidebar" id="navSidebar">
+        <div class="nav-header">
+            <a href="{% url 'home' %}" class="logo">
+                <div class="logo-icon">📄</div>
+                <span>Resume Builder</span>
+            </a>
+            {% if user.is_authenticated %}
+                <div class="nav-user-info">
+                    Welcome back, {{ user.first_name|default:"User" }}!
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="nav-menu">
+            <!-- Main Navigation -->
+            <div class="nav-section">
+                <div class="nav-section-title">Navigation</div>
+                <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    <span class="nav-item-icon">🏠</span>Home
+                </a>
+                {% if user.is_authenticated %}
+                    <a href="{% url 'profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                        <span class="nav-item-icon">👤</span>Profile
+                    </a>
+                {% endif %}
+            </div>
+
+            {% if user.is_authenticated %}
+            <!-- Resume Building -->
+            <div class="nav-section">
+                <div class="nav-section-title">Resume Building</div>
+                <a href="#" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
+                    <span class="nav-item-icon">💼</span>Add Experience
+                </a>
+                <a href="#" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
+                    <span class="nav-item-icon">🎓</span>Add Education
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">🛠️</span>Add Skills
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">🏆</span>Add Achievements
+                </a>
+            </div>
+
+            <!-- Resume Management -->
+            <div class="nav-section">
+                <div class="nav-section-title">Resume Management</div>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">📝</span>Create Resume
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">📋</span>My Resumes
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">📊</span>Resume Analytics
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">🎨</span>Templates
+                </a>
+            </div>
+
+            <!-- Account -->
+            <div class="nav-section">
+                <div class="nav-section-title">Account</div>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">⚙️</span>Settings
+                </a>
+                <a href="#" class="nav-item">
+                    <span class="nav-item-icon">💡</span>Help & Support
+                </a>
+                <a href="{% url 'logout' %}" class="nav-item">
+                    <span class="nav-item-icon">🚪</span>Logout
+                </a>
+            </div>
+            {% else %}
+            <!-- Guest Navigation -->
+            <div class="nav-section">
+                <div class="nav-section-title">Get Started</div>
+                <a href="{% url 'login' %}" class="nav-item">
+                    <span class="nav-item-icon">🔑</span>Login
+                </a>
+                <a href="{% url 'register' %}" class="nav-item">
+                    <span class="nav-item-icon">📝</span>Register
+                </a>
+            </div>
+            {% endif %}
+        </div>
+    </nav>
 
     <!-- Main Content -->
     <main>
@@ -458,19 +722,114 @@
     </main>
 
     <script>
-        function toggleMobileMenu() {
-            const nav = document.getElementById('nav');
-            nav.classList.toggle('active');
+        function toggleNavMenu() {
+            const hamburger = document.getElementById('hamburgerMenu');
+            const overlay = document.getElementById('navOverlay');
+            const sidebar = document.getElementById('navSidebar');
+            
+            hamburger.classList.toggle('active');
+            overlay.classList.toggle('active');
+            sidebar.classList.toggle('active');
+            
+            // Prevent body scroll when menu is open
+            document.body.style.overflow = overlay.classList.contains('active') ? 'hidden' : '';
         }
 
-        // Close mobile menu when clicking outside
-        document.addEventListener('click', function(event) {
-            const nav = document.getElementById('nav');
-            const menuBtn = document.querySelector('.mobile-menu-btn');
+        function closeNavMenu() {
+            const hamburger = document.getElementById('hamburgerMenu');
+            const overlay = document.getElementById('navOverlay');
+            const sidebar = document.getElementById('navSidebar');
             
-            if (!nav.contains(event.target) && !menuBtn.contains(event.target)) {
-                nav.classList.remove('active');
+            hamburger.classList.remove('active');
+            overlay.classList.remove('active');
+            sidebar.classList.remove('active');
+            
+            // Restore body scroll
+            document.body.style.overflow = '';
+        }
+
+        function toggleBannerCollapse() {
+            const banner = document.getElementById('banner');
+            const toggleBtn = document.getElementById('collapseToggle');
+            
+            banner.classList.toggle('collapsed');
+            toggleBtn.classList.toggle('collapsed');
+            
+            // Store the collapsed state in localStorage
+            const isCollapsed = banner.classList.contains('collapsed');
+            localStorage.setItem('bannerCollapsed', isCollapsed);
+        }
+
+        // Close menu when clicking on nav items
+        document.addEventListener('click', function(event) {
+            if (event.target.classList.contains('nav-item')) {
+                closeNavMenu();
             }
+        });
+
+        // Close menu on escape key
+        document.addEventListener('keydown', function(event) {
+            if (event.key === 'Escape') {
+                closeNavMenu();
+            }
+        });
+
+        // Restore banner collapse state on page load
+        document.addEventListener('DOMContentLoaded', function() {
+            const isCollapsed = localStorage.getItem('bannerCollapsed') === 'true';
+            if (isCollapsed) {
+                const banner = document.getElementById('banner');
+                const toggleBtn = document.getElementById('collapseToggle');
+                banner.classList.add('collapsed');
+                toggleBtn.classList.add('collapsed');
+            }
+        });
+
+        // Keyboard shortcut to toggle banner (Ctrl/Cmd + `)
+        document.addEventListener('keydown', function(event) {
+            if ((event.ctrlKey || event.metaKey) && event.key === '`') {
+                event.preventDefault();
+                toggleBannerCollapse();
+            }
+            
+            // Toggle menu with Ctrl/Cmd + M
+            if ((event.ctrlKey || event.metaKey) && event.key === 'm') {
+                event.preventDefault();
+                toggleNavMenu();
+            }
+        });
+
+        // Auto-collapse banner when scrolling down, expand when scrolling up
+        let lastScrollTop = 0;
+        let scrollTimeout;
+
+        window.addEventListener('scroll', function() {
+            const banner = document.getElementById('banner');
+            const toggleBtn = document.getElementById('collapseToggle');
+            
+            // Don't auto-collapse on mobile
+            if (window.innerWidth <= 768) return;
+            
+            const scrollTop = window.pageYOffset || document.documentElement.scrollTop;
+            
+            clearTimeout(scrollTimeout);
+            
+            scrollTimeout = setTimeout(() => {
+                // Only auto-collapse if user manually collapsed it before
+                const manuallyCollapsed = localStorage.getItem('bannerCollapsed') === 'true';
+                
+                if (scrollTop > lastScrollTop && scrollTop > 100 && !manuallyCollapsed) {
+                    // Scrolling down - hide banner
+                    banner.classList.add('collapsed');
+                    toggleBtn.classList.add('collapsed');
+                } else if (scrollTop < lastScrollTop && !manuallyCollapsed) {
+                    // Scrolling up - show banner
+                    banner.classList.remove('collapsed');
+                    toggleBtn.classList.remove('collapsed');
+                }
+                
+                lastScrollTop = scrollTop;
+            }, 100);
         });
     </script>
     {% block extra_js %}{% endblock %}
