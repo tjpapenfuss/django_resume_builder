@@ -1,70 +1,56 @@
-from .forms import UserRegistrationForm
 from django.shortcuts import render, redirect
-from django.contrib.auth import authenticate, login, logout
-
-from django.contrib import messages
 from django.contrib.auth.decorators import login_required
+from django.contrib.auth import login, logout
+from django.contrib import messages
 from .forms import UserRegistrationForm, CustomAuthenticationForm, UserProfileForm
-from django.contrib.auth.forms import UserCreationForm
+
+def home(request):
+    """Home page view"""
+    return render(request, 'home.html')
 
 def register(request):
+    """User registration view"""
     if request.method == 'POST':
-        form = UserCreationForm(request.POST)  # Or your custom form
+        form = UserRegistrationForm(request.POST)
         if form.is_valid():
             user = form.save()
-            messages.success(request, 'Account created successfully!')
+            messages.success(request, 'Account created successfully! You can now log in.')
             return redirect('login')
     else:
-        form = UserCreationForm()
+        form = UserRegistrationForm()
+    
     return render(request, 'user/register.html', {'form': form})
 
-# def register(request):
-#     if request.method == "POST":
-#         form = UserRegistrationForm(request.POST)
-#         if form.is_valid():
-#             form.save()
-#             return redirect("login")  # redirect to login page or dashboard
-#     else:
-#         form = UserRegistrationForm()
-#     return render(request, "user/register.html", {"form": form})
-
-@login_required
-def profile_view(request):
-    if request.method == 'POST':
-        form = UserProfileForm(request.POST, instance=request.user)
-        if form.is_valid():
-            form.save()
-            messages.success(request, 'Your profile has been updated successfully!')
-            return redirect('profile')
-    else:
-        form = UserProfileForm(instance=request.user)
-    
-    return render(request, 'user/profile.html', {'form': form, 'user': request.user})
-
-def login_view(request):
+def custom_login(request):
+    """Custom login view using email instead of username"""
     if request.method == 'POST':
         form = CustomAuthenticationForm(request, data=request.POST)
-        
         if form.is_valid():
             user = form.get_user()
-            if user:
-                # Log the user in first
-                login(request, user)
-                
-                # Then increment login count
-                user.login_count += 1
-                user.save()
-                                
-                return redirect('profile')
-            else:
-                print("get_user() returned None")  # Debug
-        else:
-            print(f"Form errors: {form.errors}")  # Debug
+            # Then increment login count
+            user.login_count += 1
+            user.save()
+            login(request, user)
+            messages.success(request, f'Welcome back, {user.first_name or user.email}!')
+            return redirect('home')  # or wherever you want to redirect after login
     else:
         form = CustomAuthenticationForm()
     
     return render(request, 'user/login.html', {'form': form})
 
+@login_required
+def profile(request):
+    """User profile view"""
+    if request.method == 'POST':
+        form = UserProfileForm(request.POST, instance=request.user)
+        if form.is_valid():
+            form.save()
+            messages.success(request, 'Profile updated successfully!')
+            return redirect('profile')
+    else:
+        form = UserProfileForm(instance=request.user)
+    
+    return render(request, 'user/profile.html', {'form': form})
 
 # Add this to your existing views
 def logout_view(request):

@@ -29,19 +29,30 @@
         <form method="post">
             {% csrf_token %}
             
+            <!-- Email Field -->
+            {% if form.email %}
             <div class="form-group">
-                <label for="{{ form.email.id_for_label }}">
-                    {% if 'email' in form.email.label|lower %}
-                        📧 {{ form.email.label }}
-                    {% else %}
-                        👤 {{ form.email.label }}
-                    {% endif %}
-                </label>
+                <label for="{{ form.email.id_for_label }}">📧 {{ form.email.label }}</label>
                 {{ form.email }}
                 {% if form.email.errors %}
                     <div class="alert alert-error">{{ form.email.errors }}</div>
                 {% endif %}
             </div>
+            {% elif form.username %}
+            <div class="form-group">
+                <label for="{{ form.username.id_for_label }}">
+                    {% if 'email' in form.username.label|lower %}
+                        📧 {{ form.username.label }}
+                    {% else %}
+                        👤 {{ form.username.label }}
+                    {% endif %}
+                </label>
+                {{ form.username }}
+                {% if form.username.errors %}
+                    <div class="alert alert-error">{{ form.username.errors }}</div>
+                {% endif %}
+            </div>
+            {% endif %}
 
             <div class="form-group">
                 <label for="{{ form.password.id_for_label }}">🔒 {{ form.password.label }}</label>
