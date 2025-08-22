@@ -2,12 +2,13 @@ from django.contrib.auth.models import AbstractBaseUser, PermissionsMixin
 from django.db import models
 from django.utils import timezone
 from django.utils.translation import gettext_lazy as _
+import uuid
 #from datetime import datetime, timezone
 
 from .managers import UserManager
 
 class User(AbstractBaseUser, PermissionsMixin):
-    user_id = models.CharField(primary_key=True, max_length=40, editable=False)
+    user_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     email = models.EmailField(max_length=100, unique=True)
     first_name = models.CharField(max_length=50, blank=True, null=True)
     last_name = models.CharField(max_length=80, blank=True, null=True)
