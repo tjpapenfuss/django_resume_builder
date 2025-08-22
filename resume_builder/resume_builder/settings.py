@@ -44,6 +44,7 @@ INSTALLED_APPS = [
     'rest_framework',
     'users',
     'app',
+    'education',
 ]
 
 # DRF settings
