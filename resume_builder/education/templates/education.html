@@ -1,0 +1,620 @@
+{% extends 'base.html' %}
+
+{% block title %}Education - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Education</h1>
+        <p>Manage your educational background</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Education Cards Section -->
+    <div class="education-cards">
+        {% for education in educations %}
+            <div class="education-card" data-education-id="{{ education.education_id }}">
+                <div class="card-header" onclick="toggleCard('{{ education.education_id }}')">
+                    <div class="card-main-info">
+                        <h3 class="institution">{{ education.institution_name }}</h3>
+                        <p class="details">
+                            {% if education.major %}{{ education.major }}{% endif %}
+                            {% if education.location %} • {{ education.location }}{% endif %}
+                            {% if education.gpa %} • GPA: {{ education.gpa }}{% endif %}
+                        </p>
+                        <p class="dates">
+                            {% if education.date_started %}{{ education.date_started|date:"M Y" }}{% endif %}
+                            {% if education.date_finished %} - {{ education.date_finished|date:"M Y" }}{% else %} - Present{% endif %}
+                            {% if not education.date_finished %} <span class="current-badge">Current</span>{% endif %}
+                        </p>
+                        {% if education.details %}
+                            <div class="card-preview-details">
+                                {% if education.details.certifications %}
+                                    <span class="detail-chip">{{ education.details.certifications|length }} Certification{{ education.details.certifications|length|pluralize }}</span>
+                                {% endif %}
+                                {% if education.details.courses %}
+                                    <span class="detail-chip">{{ education.details.courses|length }} Course{{ education.details.courses|length|pluralize }}</span>
+                                {% endif %}
+                                {% if education.details.activities %}
+                                    <span class="detail-chip">Activities</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-actions">
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                
+                <div class="card-content" id="content-{{ education.education_id }}" style="display: none;">
+                    <form method="post" action="{% url 'update_education' education.education_id %}" class="education-form">
+                        {% csrf_token %}
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="institution_{{ education.education_id }}">Institution Name</label>
+                                <input type="text" 
+                                       id="institution_{{ education.education_id }}" 
+                                       name="institution_name" 
+                                       class="form-control" 
+                                       value="{{ education.institution_name }}" 
+                                       placeholder="Enter institution name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="location_{{ education.education_id }}">Location</label>
+                                <input type="text" 
+                                       id="location_{{ education.education_id }}" 
+                                       name="location" 
+                                       class="form-control" 
+                                       value="{{ education.location|default:'' }}" 
+                                       placeholder="Enter location (City, State/Country)">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="major_{{ education.education_id }}">Major/Degree Program</label>
+                                <input type="text" 
+                                       id="major_{{ education.education_id }}" 
+                                       name="major" 
+                                       class="form-control" 
+                                       value="{{ education.major|default:'' }}" 
+                                       placeholder="Enter major/degree program">
+                            </div>
+                            <div class="form-group">
+                                <label for="minor_{{ education.education_id }}">Minor</label>
+                                <input type="text" 
+                                       id="minor_{{ education.education_id }}" 
+                                       name="minor" 
+                                       class="form-control" 
+                                       value="{{ education.minor|default:'' }}" 
+                                       placeholder="Enter minor (if applicable)">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="gpa_{{ education.education_id }}">GPA (Optional)</label>
+                                <input type="number" 
+                                       id="gpa_{{ education.education_id }}" 
+                                       name="gpa" 
+                                       class="form-control" 
+                                       value="{{ education.gpa|default:'' }}" 
+                                       placeholder="Enter GPA (optional)" 
+                                       step="0.01" 
+                                       min="0" 
+                                       max="4">
+                                <small class="help-text">Enter GPA on a 4.0 scale (optional)</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="date_started_{{ education.education_id }}">Start Date</label>
+                                <input type="date" 
+                                       id="date_started_{{ education.education_id }}" 
+                                       name="date_started" 
+                                       class="form-control" 
+                                       value="{% if education.date_started %}{{ education.date_started|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="form-group">
+                                <label for="date_finished_{{ education.education_id }}">End Date</label>
+                                <input type="date" 
+                                       id="date_finished_{{ education.education_id }}" 
+                                       name="date_finished" 
+                                       class="form-control" 
+                                       value="{% if education.date_finished %}{{ education.date_finished|date:'Y-m-d' }}{% endif %}">
+                                <small class="help-text">Leave blank if currently enrolled</small>
+                            </div>
+                        </div>
+
+                        <!-- Additional Details Section -->
+                        <div class="details-section">
+                            <h4>Additional Details</h4>
+                            
+                            <div class="form-group">
+                                <label for="certifications_{{ education.education_id }}">Certifications</label>
+                                <textarea id="certifications_{{ education.education_id }}" 
+                                          name="certifications" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="List any certifications earned (one per line)">{% if education.details.certifications %}{{ education.details.certifications|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">List certifications earned during or related to this education (one per line)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="courses_{{ education.education_id }}">Relevant Courses</label>
+                                <textarea id="courses_{{ education.education_id }}" 
+                                          name="courses" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="List relevant courses or coursework (one per line)">{% if education.details.courses %}{{ education.details.courses|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">List relevant or notable courses (one per line)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="activities_{{ education.education_id }}">Activities & Honors</label>
+                                <textarea id="activities_{{ education.education_id }}" 
+                                          name="activities" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Clubs, organizations, activities, honors, awards, etc.">{{ education.details.activities|default:"" }}</textarea>
+                                <small class="help-text">Include clubs, organizations, honors, awards, leadership roles, etc.</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="additional_info_{{ education.education_id }}">Additional Information</label>
+                                <textarea id="additional_info_{{ education.education_id }}" 
+                                          name="additional_info" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Any additional information about your education">{{ education.details.additional_info|default:"" }}</textarea>
+                            </div>
+                        </div>
+
+                        <div class="card-actions-buttons">
+                            <button type="submit" class="btn btn-primary">Update</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteEducation('{{ education.education_id }}')">Delete</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleCard('{{ education.education_id }}')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <p>No education entries yet. Add your first educational experience below!</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Education Form -->
+    <div class="form-section">
+        <h2>Add Education</h2>
+        
+        <form method="post" action="{% url 'add_education' %}">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.institution_name.label_tag }}
+                    {{ form.institution_name }}
+                    {% if form.institution_name.errors %}
+                        <div class="alert alert-error">{{ form.institution_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.location.label_tag }}
+                    {{ form.location }}
+                    {% if form.location.errors %}
+                        <div class="alert alert-error">{{ form.location.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.major.label_tag }}
+                    {{ form.major }}
+                    {% if form.major.errors %}
+                        <div class="alert alert-error">{{ form.major.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.minor.label_tag }}
+                    {{ form.minor }}
+                    {% if form.minor.errors %}
+                        <div class="alert alert-error">{{ form.minor.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.gpa.label_tag }}
+                    {{ form.gpa }}
+                    {% if form.gpa.help_text %}
+                        <small class="help-text">{{ form.gpa.help_text }}</small>
+                    {% endif %}
+                    {% if form.gpa.errors %}
+                        <div class="alert alert-error">{{ form.gpa.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.date_started.label_tag }}
+                    {{ form.date_started }}
+                    {% if form.date_started.errors %}
+                        <div class="alert alert-error">{{ form.date_started.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.date_finished.label_tag }}
+                    {{ form.date_finished }}
+                    {% if form.date_finished.help_text %}
+                        <small class="help-text">{{ form.date_finished.help_text }}</small>
+                    {% endif %}
+                    {% if form.date_finished.errors %}
+                        <div class="alert alert-error">{{ form.date_finished.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Details Section -->
+            <div class="details-section">
+                <h3>Additional Details</h3>
+                
+                <div class="form-group">
+                    {{ form.certifications.label_tag }}
+                    {{ form.certifications }}
+                    {% if form.certifications.help_text %}
+                        <small class="help-text">{{ form.certifications.help_text }}</small>
+                    {% endif %}
+                    {% if form.certifications.errors %}
+                        <div class="alert alert-error">{{ form.certifications.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.courses.label_tag }}
+                    {{ form.courses }}
+                    {% if form.courses.help_text %}
+                        <small class="help-text">{{ form.courses.help_text }}</small>
+                    {% endif %}
+                    {% if form.courses.errors %}
+                        <div class="alert alert-error">{{ form.courses.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.activities.label_tag }}
+                    {{ form.activities }}
+                    {% if form.activities.help_text %}
+                        <small class="help-text">{{ form.activities.help_text }}</small>
+                    {% endif %}
+                    {% if form.activities.errors %}
+                        <div class="alert alert-error">{{ form.activities.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.additional_info.label_tag }}
+                    {{ form.additional_info }}
+                    {% if form.additional_info.errors %}
+                        <div class="alert alert-error">{{ form.additional_info.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Add Education</button>
+                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Education Cards Styles */
+.education-cards {
+    margin-bottom: 2rem;
+}
+
+.education-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.education-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.card-main-info h3.institution {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.card-main-info p.details {
+    margin: 0 0 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.card-main-info p.dates {
+    margin: 0;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.expand-icon {
+    font-size: 1.2rem;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.education-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.card-content {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.card-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.card-preview-details {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.detail-chip {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.details-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.details-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.current-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .card-actions-buttons {
+        flex-direction: column;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function toggleCard(educationId) {
+    const card = document.querySelector(`[data-education-id="${educationId}"]`);
+    const content = document.getElementById(`content-${educationId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+function deleteEducation(educationId) {
+    if (confirm('Are you sure you want to delete this education entry? This action cannot be undone.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/education/delete/${educationId}/`;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

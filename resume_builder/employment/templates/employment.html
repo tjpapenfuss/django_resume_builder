@@ -1,0 +1,662 @@
+{% extends 'base.html' %}
+
+{% block title %}Employment - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Employment History</h1>
+        <p>Manage your work experience and employment history</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Employment Cards Section -->
+    <div class="employment-cards">
+        {% for employment in employments %}
+            <div class="employment-card" data-employment-id="{{ employment.employment_id }}">
+                <div class="card-header" onclick="toggleCard('{{ employment.employment_id }}')">
+                    <div class="card-main-info">
+                        <h3 class="company">{{ employment.company_name }}</h3>
+                        <p class="job-title">
+                            {% if employment.title %}{{ employment.title }}{% endif %}
+                            {% if employment.location %} • {{ employment.location }}{% endif %}
+                            {% if employment.details.employment_type %} • {{ employment.details.employment_type|capfirst }}{% endif %}
+                        </p>
+                        <p class="dates">
+                            {% if employment.date_started %}{{ employment.date_started|date:"M Y" }}{% endif %}
+                            {% if employment.date_finished %} - {{ employment.date_finished|date:"M Y" }}{% else %} - Present{% endif %}
+                            {% if not employment.date_finished %} <span class="current-badge">Current</span>{% endif %}
+                        </p>
+                        {% if employment.details %}
+                            <div class="card-preview-details">
+                                {% if employment.details.responsibilities %}
+                                    <span class="detail-chip">{{ employment.details.responsibilities|length }} Responsibilit{{ employment.details.responsibilities|length|pluralize:"y,ies" }}</span>
+                                {% endif %}
+                                {% if employment.details.achievements %}
+                                    <span class="detail-chip">{{ employment.details.achievements|length }} Achievement{{ employment.details.achievements|length|pluralize }}</span>
+                                {% endif %}
+                                {% if employment.details.skills_used %}
+                                    <span class="detail-chip">{{ employment.details.skills_used|length }} Skill{{ employment.details.skills_used|length|pluralize }}</span>
+                                {% endif %}
+                                {% if employment.details.salary %}
+                                    <span class="detail-chip salary-chip">Salary Info</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-actions">
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+                
+                <div class="card-content" id="content-{{ employment.employment_id }}" style="display: none;">
+                    <form method="post" action="{% url 'update_employment' employment.employment_id %}" class="employment-form">
+                        {% csrf_token %}
+                        
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="company_{{ employment.employment_id }}">Company Name</label>
+                                <input type="text" 
+                                       id="company_{{ employment.employment_id }}" 
+                                       name="company_name" 
+                                       class="form-control" 
+                                       value="{{ employment.company_name }}" 
+                                       placeholder="Enter company name" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="location_{{ employment.employment_id }}">Location</label>
+                                <input type="text" 
+                                       id="location_{{ employment.employment_id }}" 
+                                       name="location" 
+                                       class="form-control" 
+                                       value="{{ employment.location|default:'' }}" 
+                                       placeholder="Enter location (City, State/Country)">
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="title_{{ employment.employment_id }}">Job Title</label>
+                                <input type="text" 
+                                       id="title_{{ employment.employment_id }}" 
+                                       name="title" 
+                                       class="form-control" 
+                                       value="{{ employment.title|default:'' }}" 
+                                       placeholder="Enter job title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="employment_type_{{ employment.employment_id }}">Employment Type</label>
+                                <select id="employment_type_{{ employment.employment_id }}" 
+                                        name="employment_type" 
+                                        class="form-control">
+                                    <option value="">Select employment type</option>
+                                    <option value="full_time" {% if employment.details.employment_type == 'full_time' %}selected{% endif %}>Full-time</option>
+                                    <option value="part_time" {% if employment.details.employment_type == 'part_time' %}selected{% endif %}>Part-time</option>
+                                    <option value="contract" {% if employment.details.employment_type == 'contract' %}selected{% endif %}>Contract</option>
+                                    <option value="internship" {% if employment.details.employment_type == 'internship' %}selected{% endif %}>Internship</option>
+                                    <option value="freelance" {% if employment.details.employment_type == 'freelance' %}selected{% endif %}>Freelance</option>
+                                    <option value="temporary" {% if employment.details.employment_type == 'temporary' %}selected{% endif %}>Temporary</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description_{{ employment.employment_id }}">Job Description</label>
+                            <textarea id="description_{{ employment.employment_id }}" 
+                                      name="description" 
+                                      class="form-control" 
+                                      rows="3" 
+                                      placeholder="Brief description of the role">{{ employment.description|default:"" }}</textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="date_started_{{ employment.employment_id }}">Start Date</label>
+                                <input type="date" 
+                                       id="date_started_{{ employment.employment_id }}" 
+                                       name="date_started" 
+                                       class="form-control" 
+                                       value="{% if employment.date_started %}{{ employment.date_started|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="form-group">
+                                <label for="date_finished_{{ employment.employment_id }}">End Date</label>
+                                <input type="date" 
+                                       id="date_finished_{{ employment.employment_id }}" 
+                                       name="date_finished" 
+                                       class="form-control" 
+                                       value="{% if employment.date_finished %}{{ employment.date_finished|date:'Y-m-d' }}{% endif %}">
+                                <small class="help-text">Leave blank if this is your current position</small>
+                            </div>
+                        </div>
+
+                        <!-- Employment Details Section -->
+                        <div class="details-section">
+                            <h4>Employment Details</h4>
+                            
+                            <div class="form-group">
+                                <label for="responsibilities_{{ employment.employment_id }}">Key Responsibilities</label>
+                                <textarea id="responsibilities_{{ employment.employment_id }}" 
+                                          name="responsibilities" 
+                                          class="form-control" 
+                                          rows="4" 
+                                          placeholder="List key responsibilities and duties (one per line)">{% if employment.details.responsibilities %}{{ employment.details.responsibilities|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">List your main job duties and responsibilities (one per line)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="achievements_{{ employment.employment_id }}">Achievements & Accomplishments</label>
+                                <textarea id="achievements_{{ employment.employment_id }}" 
+                                          name="achievements" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="List major achievements and accomplishments (one per line)">{% if employment.details.achievements %}{{ employment.details.achievements|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">Include quantifiable results, awards, promotions, etc. (one per line)</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="skills_{{ employment.employment_id }}">Skills & Technologies</label>
+                                <textarea id="skills_{{ employment.employment_id }}" 
+                                          name="skills_used" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="List skills, technologies, and tools used (one per line)">{% if employment.details.skills_used %}{{ employment.details.skills_used|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">List relevant skills, software, technologies, tools used (one per line)</small>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="salary_{{ employment.employment_id }}">Salary/Compensation</label>
+                                    <input type="text" 
+                                           id="salary_{{ employment.employment_id }}" 
+                                           name="salary" 
+                                           class="form-control" 
+                                           value="{{ employment.details.salary|default:"" }}" 
+                                           placeholder="e.g., $65,000 - $75,000 or Competitive">
+                                    <small class="help-text">Optional - can include range, benefits, or just "Competitive"</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="supervisor_{{ employment.employment_id }}">Supervisor/Manager</label>
+                                    <input type="text" 
+                                           id="supervisor_{{ employment.employment_id }}" 
+                                           name="supervisor" 
+                                           class="form-control" 
+                                           value="{{ employment.details.supervisor|default:"" }}" 
+                                           placeholder="Supervisor or manager name">
+                                </div>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="reason_{{ employment.employment_id }}">Reason for Leaving</label>
+                                <textarea id="reason_{{ employment.employment_id }}" 
+                                          name="reason_for_leaving" 
+                                          class="form-control" 
+                                          rows="2" 
+                                          placeholder="Brief reason for leaving (optional)">{{ employment.details.reason_for_leaving|default:"" }}</textarea>
+                                <small class="help-text">Brief, professional reason (optional)</small>
+                            </div>
+                        </div>
+
+                        <div class="card-actions-buttons">
+                            <button type="submit" class="btn btn-primary">Update</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteEmployment('{{ employment.employment_id }}')">Delete</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleCard('{{ employment.employment_id }}')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                <p>No employment entries yet. Add your first work experience below!</p>
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Employment Form -->
+    <div class="form-section">
+        <h2>Add Employment</h2>
+        
+        <form method="post" action="{% url 'add_employment' %}">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.company_name.label_tag }}
+                    {{ form.company_name }}
+                    {% if form.company_name.errors %}
+                        <div class="alert alert-error">{{ form.company_name.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.location.label_tag }}
+                    {{ form.location }}
+                    {% if form.location.errors %}
+                        <div class="alert alert-error">{{ form.location.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <div class="alert alert-error">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.employment_type.label_tag }}
+                    {{ form.employment_type }}
+                    {% if form.employment_type.errors %}
+                        <div class="alert alert-error">{{ form.employment_type.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label_tag }}
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="alert alert-error">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.date_started.label_tag }}
+                    {{ form.date_started }}
+                    {% if form.date_started.errors %}
+                        <div class="alert alert-error">{{ form.date_started.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.date_finished.label_tag }}
+                    {{ form.date_finished }}
+                    {% if form.date_finished.help_text %}
+                        <small class="help-text">{{ form.date_finished.help_text }}</small>
+                    {% endif %}
+                    {% if form.date_finished.errors %}
+                        <div class="alert alert-error">{{ form.date_finished.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Employment Details Section -->
+            <div class="details-section">
+                <h3>Employment Details</h3>
+                
+                <div class="form-group">
+                    {{ form.responsibilities.label_tag }}
+                    {{ form.responsibilities }}
+                    {% if form.responsibilities.help_text %}
+                        <small class="help-text">{{ form.responsibilities.help_text }}</small>
+                    {% endif %}
+                    {% if form.responsibilities.errors %}
+                        <div class="alert alert-error">{{ form.responsibilities.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.achievements.label_tag }}
+                    {{ form.achievements }}
+                    {% if form.achievements.help_text %}
+                        <small class="help-text">{{ form.achievements.help_text }}</small>
+                    {% endif %}
+                    {% if form.achievements.errors %}
+                        <div class="alert alert-error">{{ form.achievements.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.skills_used.label_tag }}
+                    {{ form.skills_used }}
+                    {% if form.skills_used.help_text %}
+                        <small class="help-text">{{ form.skills_used.help_text }}</small>
+                    {% endif %}
+                    {% if form.skills_used.errors %}
+                        <div class="alert alert-error">{{ form.skills_used.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.salary.label_tag }}
+                        {{ form.salary }}
+                        {% if form.salary.help_text %}
+                            <small class="help-text">{{ form.salary.help_text }}</small>
+                        {% endif %}
+                        {% if form.salary.errors %}
+                            <div class="alert alert-error">{{ form.salary.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.supervisor.label_tag }}
+                        {{ form.supervisor }}
+                        {% if form.supervisor.errors %}
+                            <div class="alert alert-error">{{ form.supervisor.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    {{ form.reason_for_leaving.label_tag }}
+                    {{ form.reason_for_leaving }}
+                    {% if form.reason_for_leaving.help_text %}
+                        <small class="help-text">{{ form.reason_for_leaving.help_text }}</small>
+                    {% endif %}
+                    {% if form.reason_for_leaving.errors %}
+                        <div class="alert alert-error">{{ form.reason_for_leaving.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Add Employment</button>
+                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Employment Cards Styles */
+.employment-cards {
+    margin-bottom: 2rem;
+}
+
+.employment-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.employment-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    user-select: none;
+}
+
+.card-main-info h3.institution {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.card-main-info p.details {
+    margin: 0 0 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.card-main-info p.dates {
+    margin: 0;
+    color: #888;
+    font-size: 0.85rem;
+}
+
+.expand-icon {
+    font-size: 1.2rem;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.employment-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.card-content {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.card-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.card-preview-details {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.detail-chip {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.details-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.details-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.current-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-left: 0.5rem;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .card-actions-buttons {
+        flex-direction: column;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+}
+</style>
+
+<script>
+function toggleCard(employmentId) {
+    const card = document.querySelector(`[data-employment-id="${employmentId}"]`);
+    const content = document.getElementById(`content-${employmentId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+function deleteEmployment(employmentId) {
+    if (confirm('Are you sure you want to delete this employment entry? This action cannot be undone.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/employment/delete/${employmentId}/`;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+</script>
+{% endblock %}

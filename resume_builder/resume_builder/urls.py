@@ -23,5 +23,7 @@ urlpatterns = [
     path('admin/', admin.site.urls),
     #path("login/", views.login_view, name="login"),
     path("users/", include("users.urls")),
+    path("education/", include("education.urls")),
+    path("employment/", include("employment.urls")),
     path("", include("app.urls")),  # Main app URLs (includes home page)
 ]

@@ -656,10 +656,10 @@
             <!-- Resume Building -->
             <div class="nav-section">
                 <div class="nav-section-title">Resume Building</div>
-                <a href="#" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
-                    <span class="nav-item-icon">💼</span>Add Experience
+                <a href="{% url 'employment' %}" class="nav-item {% if request.resolver_match.url_name == 'add_employment' %}active{% endif %}">
+                    <span class="nav-item-icon">💼</span>Add Employment
                 </a>
-                <a href="#" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
+                <a href="{% url 'education' %}" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
                     <span class="nav-item-icon">🎓</span>Add Education
                 </a>
                 <a href="#" class="nav-item">
