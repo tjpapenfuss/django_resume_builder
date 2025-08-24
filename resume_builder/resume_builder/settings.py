@@ -46,6 +46,8 @@ INSTALLED_APPS = [
     'app',
     'education',
     'employment',
+    'experience',
+    'skills',
 ]
 
 # DRF settings

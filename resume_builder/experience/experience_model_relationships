@@ -1,0 +1,11 @@
+// Experience Model Relationships
+digraph {
+	User [label="User
+(Django Auth User)" fillcolor=lightblue shape=box style=filled]
+	Employment [label=Employment fillcolor=lightyellow shape=box style=filled]
+	Education [label=Education fillcolor=lightyellow shape=box style=filled]
+	Experience [label=Experience fillcolor=lightgreen shape=box style=filled]
+	User -> Experience [label="1 → many" dir=forward]
+	Employment -> Experience [label="0/1 → many" dir=forward]
+	Education -> Experience [label="0/1 → many" dir=forward]
+}

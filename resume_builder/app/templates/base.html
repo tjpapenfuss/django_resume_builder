@@ -662,7 +662,10 @@
                 <a href="{% url 'education' %}" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
                     <span class="nav-item-icon">🎓</span>Add Education
                 </a>
-                <a href="#" class="nav-item">
+                <a href="{% url 'experience' %}" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
+                    <span class="nav-item-icon">🎓</span>Add Experience
+                </a>
+                <a href="{% url 'skills' %}" class="nav-item {% if request.resolver_match.url_name == 'add_skill' %}active{% endif %}">
                     <span class="nav-item-icon">🛠️</span>Add Skills
                 </a>
                 <a href="#" class="nav-item">
