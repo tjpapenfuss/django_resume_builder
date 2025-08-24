@@ -27,6 +27,11 @@ def experiences(request):
     if filter_type != 'all':
         experiences = experiences.filter(experience_type=filter_type)
 
+    # Filter by visibility
+    visibility_filter = request.GET.get('visibility', 'all')
+    if visibility_filter != 'all':
+        experiences = experiences.filter(visibility=visibility_filter)
+
     # Filter by context (employment, education, standalone)
     if filter_context == 'employment':
         experiences = experiences.filter(employment__isnull=False)
@@ -52,7 +57,7 @@ def experiences(request):
     # Choices for dropdown filters
     experience_types = Experience.EXPERIENCE_TYPES
 
-    return render(request, 'experiences.html', {
+    return render(request, 'experience.html', {
         'experiences': experiences,
         'form': form,
         'experience_types': experience_types,
@@ -60,6 +65,7 @@ def experiences(request):
             'type': filter_type,
             'context': filter_context,
             'search': search_query,
+            'visibility': visibility_filter, 
         }
     })
 
@@ -73,13 +79,13 @@ def add_experience(request):
         experience.user = request.user  # attach user to entry
         experience.save()
         messages.success(request, 'Experience entry added successfully!')
-        return redirect('experiences')
+        return redirect('experience')
     else:
         # If invalid, reload page with errors + current experiences
         experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
         experience_types = Experience.EXPERIENCE_TYPES
 
-        return render(request, 'experiences.html', {
+        return render(request, 'experience.html', {
             'experiences': experiences,
             'form': form,
             'experience_types': experience_types,
@@ -87,6 +93,7 @@ def add_experience(request):
                 'type': 'all',
                 'context': 'all',
                 'search': '',
+                'visibility': 'all',
             }
         })
 
@@ -102,7 +109,7 @@ def update_experience(request, experience_id):
     if form.is_valid():
         form.save()
         messages.success(request, 'Experience entry updated successfully!')
-        return redirect('experiences')
+        return redirect('experience')
     else:
         # If request came from AJAX, return JSON errors
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -115,7 +122,7 @@ def update_experience(request, experience_id):
             experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
             experience_types = Experience.EXPERIENCE_TYPES
 
-            return render(request, 'experiences.html', {
+            return render(request, 'experience.html', {
                 'experiences': experiences,
                 'form': form,
                 'experience_types': experience_types,
@@ -124,6 +131,7 @@ def update_experience(request, experience_id):
                     'type': 'all',
                     'context': 'all',
                     'search': '',
+                    'visibility': 'all',
                 }
             })
 
@@ -134,7 +142,7 @@ def delete_experience(request, experience_id):
     experience = get_object_or_404(Experience, experience_id=experience_id, user=request.user)
     experience.delete()
     messages.success(request, 'Experience entry deleted successfully!')
-    return redirect('experiences')
+    return redirect('experience')
 
 @login_required
 def get_experience_data(request, experience_id):

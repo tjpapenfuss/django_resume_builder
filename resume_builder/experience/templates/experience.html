@@ -1,0 +1,1050 @@
+{% extends 'base.html' %}
+
+{% block title %}Experiences - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Experiences</h1>
+        <p>Manage and organize your work, education, and other experience entries</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filter and Search Section -->
+    <div class="filter-section">
+        <h3>Filter & Search Experiences</h3>
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="search">Search</label>
+                    <input type="text" 
+                           id="search" 
+                           name="search" 
+                           class="form-control" 
+                           value="{{ current_filters.search }}" 
+                           placeholder="Search by title, description, or tags">
+                </div>
+                <div class="filter-group">
+                    <label for="type">Experience Type</label>
+                    <select id="type" name="type" class="form-control">
+                        <option value="all" {% if current_filters.type == 'all' %}selected{% endif %}>All Types</option>
+                        {% for key, label in experience_types %}
+                            <option value="{{ key }}" {% if current_filters.type == key %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+            </div>
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="context">Context</label>
+                    <select id="context" name="context" class="form-control">
+                        <option value="all" {% if current_filters.context == 'all' %}selected{% endif %}>All Contexts</option>
+                        <option value="employment" {% if current_filters.context == 'employment' %}selected{% endif %}>Employment</option>
+                        <option value="education" {% if current_filters.context == 'education' %}selected{% endif %}>Education</option>
+                        <option value="standalone" {% if current_filters.context == 'standalone' %}selected{% endif %}>Standalone</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <label for="visibility">Visibility</label>
+                    <select id="visibility" name="visibility" class="form-control">
+                        <option value="all">All Visibility</option>
+                        <option value="public">Public (Resume Ready)</option>
+                        <option value="private">Private</option>
+                        <option value="draft">Draft</option>
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <!-- Empty space for alignment -->
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+                <a href="{% url 'experience' %}" class="btn btn-secondary btn-sm">Clear All</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Experience Cards Section -->
+    <div class="experience-cards">
+        {% if experiences %}
+            <div class="experience-count">
+                <p>{{ experiences|length }} experience{{ experiences|length|pluralize }} found</p>
+            </div>
+        {% endif %}
+
+        {% for experience in experiences %}
+            <div class="experience-card" data-experience-id="{{ experience.experience_id }}">
+                <div class="card-header" onclick="toggleCard('{{ experience.experience_id }}')">
+                    <div class="card-main-info">
+                        <h3 class="experience-title">{{ experience.title }}</h3>
+                        <p class="experience-details">
+                            <span class="experience-type">{{ experience.get_experience_type_display }}</span>
+                            {% if experience.context_name != "Standalone Experience" %} • {{ experience.context_name }}{% endif %}
+                        </p>
+                        <p class="experience-dates">{{ experience.duration_text }}</p>
+                        {% if experience.is_current %}
+                            <span class="current-badge">Current</span>
+                        {% endif %}
+                        
+                        {% if experience.description %}
+                            <p class="experience-description">{{ experience.description|truncatechars:120 }}</p>
+                        {% endif %}
+                        
+                        {% if experience.skills_used or experience.tags %}
+                            <div class="card-preview-details">
+                                {% if experience.skills_used %}
+                                    <span class="detail-chip">{{ experience.skills_used|length }} Skill{{ experience.skills_used|length|pluralize }}</span>
+                                {% endif %}
+                                {% if experience.tags %}
+                                    <span class="detail-chip">{{ experience.tags|length }} Tag{{ experience.tags|length|pluralize }}</span>
+                                {% endif %}
+                                {% if experience.details.outcomes %}
+                                    <span class="detail-chip">{{ experience.details.outcomes|length }} Outcome{{ experience.details.outcomes|length|pluralize }}</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-actions">
+                        <span class="visibility-badge visibility-{{ experience.visibility }}">{{ experience.get_visibility_display }}</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div class="card-content" id="content-{{ experience.experience_id }}" style="display: none;">
+                    <form method="post" action="{% url 'update_experience' experience.experience_id %}" class="experience-form">
+                        {% csrf_token %}
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="title_{{ experience.experience_id }}">Title</label>
+                                <input type="text" 
+                                       id="title_{{ experience.experience_id }}" 
+                                       name="title" 
+                                       class="form-control" 
+                                       value="{{ experience.title }}" 
+                                       placeholder="Enter experience title" required>
+                            </div>
+                            <div class="form-group">
+                                <label for="experience_type_{{ experience.experience_id }}">Experience Type</label>
+                                <select id="experience_type_{{ experience.experience_id }}" 
+                                        name="experience_type" 
+                                        class="form-control">
+                                    {% for key, label in experience_types %}
+                                        <option value="{{ key }}" {% if experience.experience_type == key %}selected{% endif %}>{{ label }}</option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-group">
+                            <label for="description_{{ experience.experience_id }}">Description</label>
+                            <textarea id="description_{{ experience.experience_id }}" 
+                                      name="description" 
+                                      class="form-control" 
+                                      rows="4" 
+                                      placeholder="Detailed description of the experience">{{ experience.description }}</textarea>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="employment_{{ experience.experience_id }}">Employment</label>
+                                <select id="employment_{{ experience.experience_id }}" name="employment" class="form-control">
+                                    <option value="">Not linked to employment</option>
+                                    {% for emp in request.user.employment_set.all %}
+                                        <option value="{{ emp.employment_id }}" {% if experience.employment and experience.employment.employment_id == emp.employment_id %}selected{% endif %}>
+                                            {{ emp.company_name }} - {{ emp.position_title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="help-text">Optionally link this to a job</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="education_{{ experience.experience_id }}">Education</label>
+                                <select id="education_{{ experience.experience_id }}" name="education" class="form-control">
+                                    <option value="">Not linked to education</option>
+                                    {% for edu in request.user.education_set.all %}
+                                        <option value="{{ edu.education_id }}" {% if experience.education and experience.education.education_id == edu.education_id %}selected{% endif %}>
+                                            {{ edu.institution_name }} - {{ edu.degree_title }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                                <small class="help-text">Optionally link this to education</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="visibility_{{ experience.experience_id }}">Visibility</label>
+                                <select id="visibility_{{ experience.experience_id }}" 
+                                        name="visibility" 
+                                        class="form-control">
+                                    <option value="public" {% if experience.visibility == 'public' %}selected{% endif %}>Include in Resumes</option>
+                                    <option value="private" {% if experience.visibility == 'private' %}selected{% endif %}>Personal Reference Only</option>
+                                    <option value="draft" {% if experience.visibility == 'draft' %}selected{% endif %}>Draft - Not Ready</option>
+                                </select>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="date_started_{{ experience.experience_id }}">Start Date</label>
+                                <input type="date" 
+                                       id="date_started_{{ experience.experience_id }}" 
+                                       name="date_started" 
+                                       class="form-control" 
+                                       value="{% if experience.date_started %}{{ experience.date_started|date:'Y-m-d' }}{% endif %}">
+                            </div>
+                            <div class="form-group">
+                                <label for="date_finished_{{ experience.experience_id }}">End Date</label>
+                                <input type="date" 
+                                       id="date_finished_{{ experience.experience_id }}" 
+                                       name="date_finished" 
+                                       class="form-control" 
+                                       value="{% if experience.date_finished %}{{ experience.date_finished|date:'Y-m-d' }}{% endif %}">
+                                <small class="help-text">Leave blank if this is ongoing</small>
+                            </div>
+                        </div>
+
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="skills_used_text_{{ experience.experience_id }}">Skills Used</label>
+                                <textarea id="skills_used_text_{{ experience.experience_id }}" 
+                                          name="skills_used_text" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="List relevant skills and technologies (one per line)">{% if experience.skills_used %}{{ experience.skills_used|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">Skills developed or demonstrated</small>
+                            </div>
+                            <div class="form-group">
+                                <label for="tags_text_{{ experience.experience_id }}">Tags</label>
+                                <textarea id="tags_text_{{ experience.experience_id }}" 
+                                          name="tags_text" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Tags for categorizing (e.g., data-engineering, leadership) - one per line">{% if experience.tags %}{{ experience.tags|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">For filtering when generating targeted resumes</small>
+                            </div>
+                        </div>
+
+                        <!-- Details Section -->
+                        <div class="details-section">
+                            <h4>Additional Details</h4>
+                            
+                            <div class="form-group">
+                                <label for="outcomes_{{ experience.experience_id }}">Outcomes</label>
+                                <textarea id="outcomes_{{ experience.experience_id }}" 
+                                          name="outcomes" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Describe the outcomes, results, or impact (one per line)">{% if experience.details.outcomes %}{{ experience.details.outcomes|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">Quantifiable results, metrics, achievements</small>
+                            </div>
+
+                            <div class="form-group">
+                                <label for="challenges_{{ experience.experience_id }}">Challenges</label>
+                                <textarea id="challenges_{{ experience.experience_id }}" 
+                                          name="challenges" 
+                                          class="form-control" 
+                                          rows="3" 
+                                          placeholder="Key challenges faced and how they were overcome (one per line)">{% if experience.details.challenges %}{{ experience.details.challenges|join:"\n" }}{% endif %}</textarea>
+                                <small class="help-text">Problems solved, obstacles overcome</small>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="tools_used_{{ experience.experience_id }}">Tools Used</label>
+                                    <textarea id="tools_used_{{ experience.experience_id }}" 
+                                              name="tools_used" 
+                                              class="form-control" 
+                                              rows="2" 
+                                              placeholder="Specific tools, software, or technologies used (one per line)">{% if experience.details.tools_used %}{{ experience.details.tools_used|join:"\n" }}{% endif %}</textarea>
+                                    <small class="help-text">Specific software, frameworks, methodologies</small>
+                                </div>
+                                <div class="form-group">
+                                    <label for="links_{{ experience.experience_id }}">Links</label>
+                                    <textarea id="links_{{ experience.experience_id }}" 
+                                              name="links" 
+                                              class="form-control" 
+                                              rows="2" 
+                                              placeholder="Relevant links (GitHub, portfolio, etc.) - one per line">{% if experience.details.links %}{{ experience.details.links|join:"\n" }}{% endif %}</textarea>
+                                </div>
+                            </div>
+
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label for="team_size_{{ experience.experience_id }}">Team Size</label>
+                                    <input type="text" 
+                                           id="team_size_{{ experience.experience_id }}" 
+                                           name="team_size" 
+                                           class="form-control" 
+                                           value="{{ experience.details.team_size|default:'' }}" 
+                                           placeholder='e.g., "5 people" or "Solo project"'>
+                                </div>
+                                <div class="form-group">
+                                    <label for="budget_{{ experience.experience_id }}">Budget</label>
+                                    <input type="text" 
+                                           id="budget_{{ experience.experience_id }}" 
+                                           name="budget" 
+                                           class="form-control" 
+                                           value="{{ experience.details.budget|default:'' }}" 
+                                           placeholder='e.g., "$50,000" or "No budget"'>
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="card-actions-buttons">
+                            <button type="submit" class="btn btn-primary">Update</button>
+                            <button type="button" class="btn btn-danger" onclick="deleteExperience('{{ experience.experience_id }}')">Delete</button>
+                            <button type="button" class="btn btn-secondary" onclick="toggleCard('{{ experience.experience_id }}')">Cancel</button>
+                        </div>
+                    </form>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                {% if current_filters.search or current_filters.type != 'all' or current_filters.context != 'all' %}
+                    <p>No experiences match your current filters. <a href="{% url 'experiences' %}">Clear filters</a> to see all experiences.</p>
+                {% else %}
+                    <p>No experience entries yet. Add your first one below!</p>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Add New Experience Form -->
+    <div class="form-section">
+        <h2>Add New Experience</h2>
+        
+        <form method="post" action="{% url 'add_experience' %}">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <div class="alert alert-error">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.experience_type.label_tag }}
+                    {{ form.experience_type }}
+                    {% if form.experience_type.errors %}
+                        <div class="alert alert-error">{{ form.experience_type.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label_tag }}
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="alert alert-error">{{ form.description.errors }}</div>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.employment.label_tag }}
+                    {{ form.employment }}
+                    {% if form.employment.help_text %}
+                        <small class="help-text">{{ form.employment.help_text }}</small>
+                    {% endif %}
+                    {% if form.employment.errors %}
+                        <div class="alert alert-error">{{ form.employment.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.education.label_tag }}
+                    {{ form.education }}
+                    {% if form.education.help_text %}
+                        <small class="help-text">{{ form.education.help_text }}</small>
+                    {% endif %}
+                    {% if form.education.errors %}
+                        <div class="alert alert-error">{{ form.education.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.visibility.label_tag }}
+                    {{ form.visibility }}
+                    {% if form.visibility.errors %}
+                        <div class="alert alert-error">{{ form.visibility.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.date_started.label_tag }}
+                    {{ form.date_started }}
+                    {% if form.date_started.errors %}
+                        <div class="alert alert-error">{{ form.date_started.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.date_finished.label_tag }}
+                    {{ form.date_finished }}
+                    {% if form.date_finished.help_text %}
+                        <small class="help-text">{{ form.date_finished.help_text }}</small>
+                    {% endif %}
+                    {% if form.date_finished.errors %}
+                        <div class="alert alert-error">{{ form.date_finished.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.skills_used_text.label_tag }}
+                    {{ form.skills_used_text }}
+                    {% if form.skills_used_text.help_text %}
+                        <small class="help-text">{{ form.skills_used_text.help_text }}</small>
+                    {% endif %}
+                    {% if form.skills_used_text.errors %}
+                        <div class="alert alert-error">{{ form.skills_used_text.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.tags_text.label_tag }}
+                    {{ form.tags_text }}
+                    {% if form.tags_text.help_text %}
+                        <small class="help-text">{{ form.tags_text.help_text }}</small>
+                    {% endif %}
+                    {% if form.tags_text.errors %}
+                        <div class="alert alert-error">{{ form.tags_text.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Experience Details Section -->
+            <div class="details-section">
+                <h3>Additional Details</h3>
+                
+                <div class="form-group">
+                    {{ form.outcomes.label_tag }}
+                    {{ form.outcomes }}
+                    {% if form.outcomes.help_text %}
+                        <small class="help-text">{{ form.outcomes.help_text }}</small>
+                    {% endif %}
+                    {% if form.outcomes.errors %}
+                        <div class="alert alert-error">{{ form.outcomes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.challenges.label_tag }}
+                    {{ form.challenges }}
+                    {% if form.challenges.help_text %}
+                        <small class="help-text">{{ form.challenges.help_text }}</small>
+                    {% endif %}
+                    {% if form.challenges.errors %}
+                        <div class="alert alert-error">{{ form.challenges.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.tools_used.label_tag }}
+                        {{ form.tools_used }}
+                        {% if form.tools_used.help_text %}
+                            <small class="help-text">{{ form.tools_used.help_text }}</small>
+                        {% endif %}
+                        {% if form.tools_used.errors %}
+                            <div class="alert alert-error">{{ form.tools_used.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.links.label_tag }}
+                        {{ form.links }}
+                        {% if form.links.errors %}
+                            <div class="alert alert-error">{{ form.links.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.team_size.label_tag }}
+                        {{ form.team_size }}
+                        {% if form.team_size.errors %}
+                            <div class="alert alert-error">{{ form.team_size.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.budget.label_tag }}
+                        {{ form.budget }}
+                        {% if form.budget.errors %}
+                            <div class="alert alert-error">{{ form.budget.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Add Experience</button>
+                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+/* Filter Section Styles */
+.filter-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.filter-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.filter-form {
+    margin: 0;
+}
+
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    margin-top: 1rem;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.experience-count {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.experience-count p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Experience Cards Styles */
+.experience-cards {
+    margin-bottom: 2rem;
+}
+
+.experience-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.experience-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    user-select: none;
+}
+
+.card-main-info h3.experience-title {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.card-main-info p.experience-details {
+    margin: 0 0 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.card-main-info p.experience-dates {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.card-main-info p.experience-description {
+    margin: 0 0 0.5rem 0;
+    color: #555;
+    font-size: 0.85rem;
+    font-style: italic;
+}
+
+.experience-type {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.current-badge {
+    background-color: #28a745;
+    color: white;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin-bottom: 0.5rem;
+    display: inline-block;
+}
+
+.visibility-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+.visibility-public {
+    background-color: #d4edda;
+    color: #155724;
+}
+
+.visibility-private {
+    background-color: #fff3cd;
+    color: #856404;
+}
+
+.visibility-draft {
+    background-color: #f8d7da;
+    color: #721c24;
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.expand-icon {
+    font-size: 1.2rem;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.experience-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.card-content {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.card-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.card-preview-details {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.detail-chip {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.details-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.details-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.empty-state a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.empty-state a:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .card-actions-buttons {
+        flex-direction: column;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .card-actions {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+}
+</style>
+
+<script>
+function toggleCard(experienceId) {
+    const card = document.querySelector(`[data-experience-id="${experienceId}"]`);
+    const content = document.getElementById(`content-${experienceId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+function deleteExperience(experienceId) {
+    if (confirm('Are you sure you want to delete this experience entry? This action cannot be undone.')) {
+        const form = document.createElement('form');
+        form.method = 'POST';
+        form.action = `/experience/delete/${experienceId}/`;
+        
+        const csrfToken = document.querySelector('[name=csrfmiddlewaretoken]').value;
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = csrfToken;
+        form.appendChild(csrfInput);
+        
+        document.body.appendChild(form);
+        form.submit();
+    }
+}
+
+// Auto-resize textareas
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    });
+    
+    // Auto-submit filters on change (optional - remove if you prefer manual submit)
+    const filterForm = document.getElementById('filter-form');
+    if (filterForm) {
+        const filterInputs = filterForm.querySelectorAll('input, select');
+        filterInputs.forEach(input => {
+            input.addEventListener('change', function() {
+                // Optional: Auto-submit on filter change
+                // filterForm.submit();
+            });
+        });
+        
+        // Real-time search (optional)
+        const searchInput = document.getElementById('search');
+        if (searchInput) {
+            let searchTimeout;
+            searchInput.addEventListener('input', function() {
+                clearTimeout(searchTimeout);
+                searchTimeout = setTimeout(function() {
+                    // Optional: Auto-submit on search after 500ms delay
+                    // filterForm.submit();
+                }, 500);
+            });
+        }
+    }
+});
+
+// Date validation
+function validateDates() {
+    const dateInputs = document.querySelectorAll('input[type="date"]');
+    dateInputs.forEach(input => {
+        if (input.name.includes('date_started') || input.name.includes('date_finished')) {
+            input.addEventListener('change', function() {
+                const experienceId = this.id.split('_').pop();
+                const startInput = document.getElementById(`date_started_${experienceId}`);
+                const endInput = document.getElementById(`date_finished_${experienceId}`);
+                
+                if (startInput && endInput && startInput.value && endInput.value) {
+                    if (new Date(startInput.value) > new Date(endInput.value)) {
+                        alert('Start date cannot be after end date.');
+                        this.value = '';
+                    }
+                }
+            });
+        }
+    });
+}
+
+// Initialize date validation
+document.addEventListener('DOMContentLoaded', validateDates);
+
+// Enhanced form validation
+function enhanceFormValidation() {
+    const forms = document.querySelectorAll('.experience-form');
+    forms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            const employmentSelect = form.querySelector('select[name="employment"]');
+            const educationSelect = form.querySelector('select[name="education"]');
+            
+            if (employmentSelect && educationSelect && 
+                employmentSelect.value && educationSelect.value) {
+                e.preventDefault();
+                alert('Experience cannot be linked to both employment and education. Please select only one.');
+                return false;
+            }
+        });
+    });
+}
+
+// Initialize form validation
+document.addEventListener('DOMContentLoaded', enhanceFormValidation);
+
+// Tag and skill input enhancement
+function enhanceTagInputs() {
+    const tagInputs = document.querySelectorAll('textarea[name*="tags_text"]');
+    const skillInputs = document.querySelectorAll('textarea[name*="skills_used_text"]');
+    
+    [...tagInputs, ...skillInputs].forEach(input => {
+        input.addEventListener('blur', function() {
+            // Clean up tags/skills: remove empty lines, trim whitespace
+            const lines = this.value.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+            this.value = lines.join('\n');
+        });
+    });
+}
+
+// Initialize tag input enhancement
+document.addEventListener('DOMContentLoaded', enhanceTagInputs);
+</script>
+{% endblock %}

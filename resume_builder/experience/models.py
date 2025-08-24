@@ -35,8 +35,8 @@ class Experience(models.Model):
     experience_type = models.CharField(max_length=20, choices=EXPERIENCE_TYPES, default='project')
     
     # Optional links to employment or education records
-    employment = models.ForeignKey("employment.Employment", on_delete=models.CASCADE, related_name="experiences")
-    education = models.ForeignKey("education.Education", on_delete=models.CASCADE, related_name="experiences")
+    employment = models.ForeignKey("employment.Employment", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
+    education = models.ForeignKey("education.Education", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
 
     # Timeframe of the experience
     date_started = models.DateField(null=True, blank=True)
