@@ -22,4 +22,9 @@ class Employment(models.Model):
         db_table = 'employment'  
 
     def __str__(self):
-        return str(self.employment_id)
+        if self.title and self.company_name:
+            return f"{self.title} at {self.company_name}"
+        elif self.company_name:
+            return self.company_name
+        else:
+            return f"Employment #{str(self.employment_id)[:8]}"  # Fallback with short UUID

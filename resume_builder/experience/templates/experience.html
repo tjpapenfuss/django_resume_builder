@@ -158,9 +158,9 @@
                                 <label for="employment_{{ experience.experience_id }}">Employment</label>
                                 <select id="employment_{{ experience.experience_id }}" name="employment" class="form-control">
                                     <option value="">Not linked to employment</option>
-                                    {% for emp in request.user.employment_set.all %}
+                                    {% for emp in request.user.employments.all %}
                                         <option value="{{ emp.employment_id }}" {% if experience.employment and experience.employment.employment_id == emp.employment_id %}selected{% endif %}>
-                                            {{ emp.company_name }} - {{ emp.position_title }}
+                                            {{ emp.company_name }} - {{ emp.title }}
                                         </option>
                                     {% endfor %}
                                 </select>
@@ -170,9 +170,9 @@
                                 <label for="education_{{ experience.experience_id }}">Education</label>
                                 <select id="education_{{ experience.experience_id }}" name="education" class="form-control">
                                     <option value="">Not linked to education</option>
-                                    {% for edu in request.user.education_set.all %}
+                                    {% for edu in request.user.educations.all %}
                                         <option value="{{ edu.education_id }}" {% if experience.education and experience.education.education_id == edu.education_id %}selected{% endif %}>
-                                            {{ edu.institution_name }} - {{ edu.degree_title }}
+                                            {{ edu.institution_name }} - {{ edu.major }}
                                         </option>
                                     {% endfor %}
                                 </select>

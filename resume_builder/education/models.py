@@ -23,4 +23,9 @@ class Education(models.Model):
         db_table = 'education'  
 
     def __str__(self):
-        return str(self.education_id)
+        if self.major and self.institution_name:
+            return f"{self.major} at {self.institution_name}"
+        elif self.institution_name:
+            return self.institution_name
+        else:
+            return f"Education #{str(self.education_id)[:8]}"  # Fallback
