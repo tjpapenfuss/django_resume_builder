@@ -48,6 +48,7 @@ INSTALLED_APPS = [
     'employment',
     'experience',
     'skills',
+    'jobs',
 ]
 
 # DRF settings
@@ -157,3 +158,14 @@ LOGIN_REDIRECT_URL = 'profile'  # or whatever URL name you want
 
 # Optional: Set logout redirect too
 LOGOUT_REDIRECT_URL = 'login'
+
+# Request timeout settings
+JOB_SCRAPER_TIMEOUT = 10  # seconds
+JOB_SCRAPER_DELAY = 2     # delay between requests
+
+# User agents for scraping (rotate these)
+JOB_SCRAPER_USER_AGENTS = [
+    'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36',
+    'Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/91.0.4472.124 Safari/537.36'
+]

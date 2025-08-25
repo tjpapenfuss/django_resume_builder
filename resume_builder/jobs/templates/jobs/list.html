@@ -1,0 +1,784 @@
+<!-- templates/jobs/list.html -->
+{% extends 'base.html' %}
+
+{% block title %}My Saved Jobs - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>My Saved Jobs</h1>
+        <p>Manage and organize job applications and opportunities</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Filter and Search Section -->
+    <div class="filter-section">
+        <h3>Filter & Search Jobs</h3>
+        <form method="get" class="filter-form" id="filter-form">
+            <div class="filter-row">
+                <div class="filter-group">
+                    <label for="search">Search</label>
+                    <input type="text" 
+                           id="search" 
+                           name="search" 
+                           class="form-control" 
+                           value="{{ search_query }}" 
+                           placeholder="Search by job title or company name">
+                </div>
+                <div class="filter-group">
+                    <label for="status">Application Status</label>
+                    <select id="status" name="status" class="form-control">
+                        <option value="">All Statuses</option>
+                        {% for value, label in status_choices %}
+                            <option value="{{ value }}" {% if status_filter == value %}selected{% endif %}>{{ label }}</option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="filter-group">
+                    <!-- Empty space for alignment -->
+                </div>
+            </div>
+            <div class="filter-actions">
+                <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
+                <a href="{% url 'job_list' %}" class="btn btn-secondary btn-sm">Clear All</a>
+                <a href="{% url 'add_job_from_url' %}" class="btn btn-primary btn-sm">Add New Job</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Job Cards Section -->
+    <div class="experience-cards">
+        {% if page_obj.object_list %}
+            <div class="experience-count">
+                <p>{{ page_obj.paginator.count }} job{{ page_obj.paginator.count|pluralize }} found</p>
+            </div>
+        {% endif %}
+
+        {% for application in page_obj %}
+            <div class="experience-card" data-job-id="{{ application.job_posting.pk }}">
+                <div class="card-header" onclick="toggleCard('{{ application.job_posting.pk }}')">
+                    <div class="card-main-info">
+                        <h3 class="experience-title">{{ application.job_posting.job_title }}</h3>
+                        <p class="experience-details">
+                            <span class="experience-type">{{ application.job_posting.company_name }}</span>
+                            {% if application.job_posting.location %} • {{ application.job_posting.location }}{% endif %}
+                        </p>
+                        <p class="experience-dates">
+                            Added {{ application.created_at|date:"M d, Y" }}
+                            {% if application.applied_date %} • Applied {{ application.applied_date|date:"M d, Y" }}{% endif %}
+                        </p>
+                        
+                        <!-- Skills Preview -->
+                        {% if application.job_posting.required_skills %}
+                            <div class="card-preview-details">
+                                {% for skill in application.job_posting.required_skills|slice:":3" %}
+                                    <span class="detail-chip">{{ skill }}</span>
+                                {% endfor %}
+                                {% if application.job_posting.required_skills|length > 3 %}
+                                    <span class="detail-chip">+{{ application.job_posting.required_skills|length|add:"-3" }} more skills</span>
+                                {% endif %}
+                                {% if application.job_posting.remote_ok %}
+                                    <span class="detail-chip" style="background-color: #e8f5e8; color: #2e7d32;">Remote OK</span>
+                                {% endif %}
+                            </div>
+                        {% endif %}
+                    </div>
+                    <div class="card-actions">
+                        <span class="visibility-badge visibility-{{ application.status }}">{{ application.get_status_display }}</span>
+                        <span class="expand-icon">▼</span>
+                    </div>
+                </div>
+
+                <!-- Collapsible Content -->
+                <div class="card-content" id="content-{{ application.job_posting.pk }}" style="display: none;">
+                    <!-- Status Update Form -->
+                    <form class="status-update-form" data-application-id="{{ application.pk }}">
+                        {% csrf_token %}
+                        <div class="form-row">
+                            <div class="form-group">
+                                <label for="status_{{ application.pk }}">Application Status</label>
+                                <select name="status" id="status_{{ application.pk }}" class="form-control">
+                                    {% for value, label in application.STATUS_CHOICES %}
+                                        <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>
+                                            {{ label }}
+                                        </option>
+                                    {% endfor %}
+                                </select>
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <button type="submit" class="btn btn-primary" style="margin-top: 0;">Update Status</button>
+                            </div>
+                            <div class="form-group">
+                                <label>&nbsp;</label>
+                                <a href="{{ application.job_posting.url }}" target="_blank" class="btn btn-secondary" style="margin-top: 0;">View Original</a>
+                            </div>
+                        </div>
+                    </form>
+
+                    <!-- Job Skills and Requirements -->
+                    <div class="details-section">
+                        <h4>Job Requirements</h4>
+                        
+                        {% if application.job_posting.required_skills %}
+                            <div class="form-group">
+                                <label>Required Skills ({{ application.job_posting.required_skills|length }})</label>
+                                <div class="skill-tags">
+                                    {% for skill in application.job_posting.required_skills %}
+                                        <span class="skill-badge skill-required">{{ skill }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if application.job_posting.preferred_skills %}
+                            <div class="form-group">
+                                <label>Preferred Skills ({{ application.job_posting.preferred_skills|length }})</label>
+                                <div class="skill-tags">
+                                    {% for skill in application.job_posting.preferred_skills %}
+                                        <span class="skill-badge skill-preferred">{{ skill }}</span>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        {% endif %}
+
+                        {% if application.job_posting.experience_requirements %}
+                            <div class="form-row">
+                                <div class="form-group">
+                                    <label>Experience Requirements</label>
+                                    <p class="form-text">{{ application.job_posting.experience_requirements }}</p>
+                                </div>
+                                <div class="form-group">
+                                    <label>Scraped Date</label>
+                                    <p class="form-text">{{ application.job_posting.scraped_at|date:"M d, Y at g:i A" }}</p>
+                                </div>
+                            </div>
+                        {% endif %}
+                    </div>
+
+                    <div class="card-actions-buttons">
+                        <a href="{% url 'job_detail' application.job_posting.pk %}" class="btn btn-primary">View Full Details</a>
+                        <a href="{% url 'job_delete' application.job_posting.pk %}" class="btn btn-danger">Remove Job</a>
+                        <button type="button" class="btn btn-secondary" onclick="toggleCard('{{ application.job_posting.pk }}')">Collapse</button>
+                    </div>
+                </div>
+            </div>
+        {% empty %}
+            <div class="empty-state">
+                {% if search_query or status_filter %}
+                    <p>No jobs match your current filters. <a href="{% url 'job_list' %}">Clear filters</a> to see all jobs.</p>
+                {% else %}
+                    <p>No jobs saved yet. Add your first one!</p>
+                    <a href="{% url 'add_job_from_url' %}" class="btn btn-primary">Add Your First Job</a>
+                {% endif %}
+            </div>
+        {% endfor %}
+    </div>
+
+    <!-- Pagination -->
+    {% if page_obj.has_other_pages %}
+        <div class="pagination-section">
+            <div class="pagination-wrapper">
+                {% if page_obj.has_previous %}
+                    <a href="?page={{ page_obj.previous_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-secondary btn-sm">← Previous</a>
+                {% endif %}
+                
+                <span class="pagination-info">
+                    Page {{ page_obj.number }} of {{ page_obj.paginator.num_pages }}
+                </span>
+                
+                {% if page_obj.has_next %}
+                    <a href="?page={{ page_obj.next_page_number }}&search={{ search_query }}&status={{ status_filter }}" class="btn btn-secondary btn-sm">Next →</a>
+                {% endif %}
+            </div>
+        </div>
+    {% endif %}
+</div>
+
+
+<style>
+/* Inherit all the existing styles from the experiences template */
+/* Filter Section Styles */
+.filter-section {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 2rem;
+}
+
+.filter-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+}
+
+.filter-form {
+    margin: 0;
+}
+
+.filter-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.filter-group {
+    flex: 1;
+    min-width: 0;
+}
+
+.filter-group label {
+    display: block;
+    margin-bottom: 0.25rem;
+    font-weight: 600;
+    color: #495057;
+    font-size: 0.9rem;
+}
+
+.filter-actions {
+    display: flex;
+    gap: 0.5rem;
+    justify-content: flex-start;
+    margin-top: 1rem;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.experience-count {
+    margin-bottom: 1rem;
+    padding: 0.5rem 0;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.experience-count p {
+    margin: 0;
+    color: #6c757d;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+/* Experience Cards Styles */
+.experience-cards {
+    margin-bottom: 2rem;
+}
+
+.experience-card {
+    background: #fff;
+    border: 1px solid #ddd;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    transition: box-shadow 0.2s;
+}
+
+.experience-card:hover {
+    box-shadow: 0 4px 8px rgba(0,0,0,0.15);
+}
+
+.card-header {
+    padding: 1rem;
+    cursor: pointer;
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    user-select: none;
+}
+
+.card-main-info h3.experience-title {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.2rem;
+}
+
+.card-main-info p.experience-details {
+    margin: 0 0 0.25rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.card-main-info p.experience-dates {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-size: 0.85rem;
+    font-weight: 500;
+}
+
+.experience-type {
+    font-weight: 600;
+    color: #007bff;
+}
+
+.visibility-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    margin-right: 0.5rem;
+}
+
+.visibility-saved {
+    background-color: #e3f2fd;
+    color: #1976d2;
+}
+
+.visibility-applied {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+.visibility-interview, .visibility-phone_screen {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+.visibility-offer {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+.visibility-rejected, .visibility-declined {
+    background-color: #ffebee;
+    color: #c62828;
+}
+
+.card-actions {
+    display: flex;
+    align-items: center;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.expand-icon {
+    font-size: 1.2rem;
+    color: #666;
+    transition: transform 0.2s;
+}
+
+.experience-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.card-content {
+    padding: 0 1rem 1rem 1rem;
+    border-top: 1px solid #eee;
+    background: #fafafa;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.form-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.card-actions-buttons {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #eee;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.card-preview-details {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.detail-chip {
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.details-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h4, .details-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border-radius: 8px;
+    margin-bottom: 2rem;
+}
+
+.empty-state a {
+    color: #007bff;
+    text-decoration: none;
+}
+
+.empty-state a:hover {
+    text-decoration: underline;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.alert-info {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+/* Job-specific styles */
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.skill-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-required {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+.skill-preferred {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #c8e6c8;
+}
+
+.focus-areas {
+    margin-top: 1rem;
+}
+
+.focus-area {
+    margin-bottom: 1rem;
+}
+
+.requirements-list {
+    margin-top: 1rem;
+}
+
+.requirement-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+}
+
+.job-description-content {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.pagination-section {
+    margin-top: 2rem;
+    text-align: center;
+}
+
+.pagination-wrapper {
+    display: inline-flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.pagination-info {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.status-update-form {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .filter-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .card-actions-buttons {
+        flex-direction: column;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+    
+    .filter-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .card-actions {
+        flex-direction: row;
+        justify-content: space-between;
+        align-items: center;
+    }
+    
+    .skill-tags {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+    
+    .pagination-wrapper {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+function toggleCard(jobId) {
+    const card = document.querySelector(`[data-job-id="${jobId}"]`);
+    const content = document.getElementById(`content-${jobId}`);
+    
+    if (content.style.display === 'none') {
+        content.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        content.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+// Status update functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const statusForms = document.querySelectorAll('.status-update-form');
+    
+    statusForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const applicationId = form.dataset.applicationId;
+            const formData = new FormData(form);
+            
+            fetch(`/jobs/api/application/${applicationId}/status/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Show success message
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Status updated successfully!';
+                    form.parentNode.insertBefore(alert, form);
+                    
+                    // Remove alert after 3 seconds
+                    setTimeout(() => alert.remove(), 3000);
+                    
+                    // Update status badge if on list page
+                    const card = form.closest('.experience-card');
+                    if (card) {
+                        const statusBadge = card.querySelector('.visibility-badge');
+                        if (statusBadge) {
+                            statusBadge.textContent = data.new_status;
+                            // Update badge class based on new status
+                            statusBadge.className = 'visibility-badge visibility-' + formData.get('status');
+                        }
+                    }
+                } else {
+                    alert('Failed to update status. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update status. Please try again.');
+            });
+        });
+    });
+    
+    // Auto-resize textareas
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    });
+});
+</script>
+{% endblock %}

@@ -26,6 +26,7 @@ urlpatterns = [
     path("education/", include("education.urls")),
     path("employment/", include("employment.urls")),
     path("experience/", include("experience.urls")),
+    path("jobs/", include("jobs.urls")),
     path("skills/", include("skills.urls")),
     path("", include("app.urls")),  # Main app URLs (includes home page)
 ]
