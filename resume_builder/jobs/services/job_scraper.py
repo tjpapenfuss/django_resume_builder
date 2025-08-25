@@ -9,6 +9,7 @@ from typing import Dict, List, Optional, Tuple, Set
 import time
 from django.utils import timezone
 from ..models import JobPosting
+from django.db import transaction
 
 class JobDescriptionScraper:
     def __init__(self):
@@ -51,7 +52,162 @@ class JobDescriptionScraper:
                 'description_selectors': ['.description', '.content', '.job-description']
             }
         }
+    def create_job_from_manual_input(self, url: str, manual_text: str, user=None) -> JobPosting:
+        """Create job posting from manually pasted job description"""
+        try:
+            with transaction.atomic():
+                # Extract basic info from URL if possible
+                company_name = self._extract_company_from_url_only(url)
+                job_title = self._extract_title_from_text(manual_text)
+                
+                # Parse the manual job description text
+                parsed_requirements = self._parse_job_requirements(manual_text)
+                
+                # Build JSON data structure
+                json_data = {
+                    'scraped_content': {
+                        'full_description': manual_text,
+                        'description_html': manual_text.replace('\n', '<br>'),  # Basic HTML conversion
+                        'company_info': '',
+                        'benefits': '',
+                        'original_url': url,
+                        'ats_platform': 'manual_input'
+                    },
+                    'parsed_requirements': parsed_requirements,
+                    'matching_opportunities': self._identify_matching_opportunities(parsed_requirements),
+                    'scraping_metadata': {
+                        'success': True,
+                        'method': 'manual_input',
+                        'scraped_at': timezone.now().isoformat(),
+                        'scraper_version': '1.0.0'
+                    }
+                }
+                
+                # Create JobPosting record
+                job_posting = JobPosting.objects.create(
+                    url=url,
+                    company_name=company_name or self._extract_company_from_text(manual_text) or "Unknown Company",
+                    job_title=job_title or "Unknown Position", 
+                    location=self._extract_location_from_text(manual_text),
+                    remote_ok=self._is_remote_job(manual_text),
+                    raw_json=json_data,
+                    added_by=user,
+                    scraping_success=True
+                )
+                
+                return job_posting
+                
+        except Exception as e:
+            raise Exception(f"Failed to create job from manual input: {str(e)}")
+    def update_job_with_manual_input(self, job_posting: JobPosting, manual_text: str) -> JobPosting:
+        """Update existing job posting with manual description"""
+        try:
+            with transaction.atomic():
+                # Parse the manual job description text
+                parsed_requirements = self._parse_job_requirements(manual_text)
+                
+                # Update the JSON data
+                updated_json = job_posting.raw_json.copy()
+                updated_json['scraped_content']['full_description'] = manual_text
+                updated_json['scraped_content']['description_html'] = manual_text.replace('\n', '<br>')
+                updated_json['parsed_requirements'] = parsed_requirements
+                updated_json['matching_opportunities'] = self._identify_matching_opportunities(parsed_requirements)
+                updated_json['scraping_metadata']['method'] = 'manual_update'
+                updated_json['scraping_metadata']['updated_at'] = timezone.now().isoformat()
+                
+                # Update the job posting
+                job_posting.raw_json = updated_json
+                
+                # Try to extract better title/company if possible
+                extracted_title = self._extract_title_from_text(manual_text)
+                extracted_company = self._extract_company_from_text(manual_text)
+                
+                if extracted_title and len(extracted_title) > len(job_posting.job_title):
+                    job_posting.job_title = extracted_title
+                    
+                if extracted_company and job_posting.company_name == "Unknown Company":
+                    job_posting.company_name = extracted_company
+                
+                # Update location and remote status
+                location = self._extract_location_from_text(manual_text)
+                if location:
+                    job_posting.location = location
+                    
+                job_posting.remote_ok = self._is_remote_job(manual_text)
+                job_posting.save()
+                
+                return job_posting
+                
+        except Exception as e:
+            raise Exception(f"Failed to update job with manual input: {str(e)}")
+    def _extract_company_from_url_only(self, url: str) -> str:
+        """Extract company name just from URL domain"""
+        try:
+            from urllib.parse import urlparse
+            parsed = urlparse(url)
+            domain = parsed.netloc.lower()
+            
+            # Remove common subdomains
+            domain = re.sub(r'^(www\.|jobs\.|careers\.|apply\.)', '', domain)
+            
+            # Remove TLD and convert to title case
+            company = domain.split('.')[0].replace('-', ' ').replace('_', ' ').title()
+            
+            return company if len(company) > 2 else ""
+        except:
+            return ""
 
+    def _extract_title_from_text(self, text: str) -> str:
+        """Try to extract job title from the beginning of the text"""
+        lines = text.strip().split('\n')
+        
+        # Look for the first substantial line that could be a title
+        for line in lines[:5]:  # Check first 5 lines
+            line = line.strip()
+            if len(line) > 10 and len(line) < 100:  # Reasonable title length
+                # Skip lines that look like company names or locations
+                if not any(word in line.lower() for word in ['company', 'location', 'about us', 'description']):
+                    return line
+        
+        return ""
+
+    def _extract_location_from_text(self, text: str) -> str:
+        """Extract location from job text"""
+        # Look for common location patterns in the text
+        location_patterns = [
+            r'Location:\s*([^\n]+)',
+            r'Based in\s*([^\n]+)', 
+            r'([A-Z][a-z]+,\s*[A-Z]{2,3})',  # City, State/Country
+            r'([A-Z][a-z]+,\s*[A-Z][a-z]+)',  # City, Country
+        ]
+        
+        for pattern in location_patterns:
+            match = re.search(pattern, text)
+            if match:
+                return match.group(1).strip()
+        
+        return ""
+
+    def _extract_company_from_text(self, text: str) -> str:
+        """Extract company name from job description text"""
+        lines = text.strip().split('\n')
+        
+        # Common patterns for company mentions
+        patterns = [
+            r'(?:at|@)\s+([A-Z][a-zA-Z\s&.,]+?)(?:\s+is\s+|\s+seeks\s+|\s+looking\s+)',
+            r'([A-Z][a-zA-Z\s&.,]+?)\s+is\s+(?:seeking|looking|hiring)',
+            r'About\s+([A-Z][a-zA-Z\s&.,]+?)(?:\n|\r|:)',
+            r'Join\s+([A-Z][a-zA-Z\s&.,]+?)(?:\s+and|\s+as|\s+in)',
+        ]
+        
+        for pattern in patterns:
+            match = re.search(pattern, text, re.IGNORECASE)
+            if match:
+                company = match.group(1).strip()
+                if len(company) > 2 and len(company) < 50:
+                    return company
+        
+        return ""
     def scrape_job_from_url(self, url: str, user=None) -> JobPosting:
         """Main method to scrape a job from URL and create JobPosting"""
         try:

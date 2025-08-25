@@ -14,6 +14,16 @@ class JobURLForm(forms.Form):
         help_text="Paste the URL of a job posting from a company's career page"
     )
     
+    manual_description = forms.CharField(
+        required=False,
+        widget=forms.Textarea(attrs={
+            'class': 'form-control',
+            'rows': 15,
+            'placeholder': 'If the auto-scraper missed details, copy and paste the full job description here...'
+        }),
+        help_text="Optional: Paste the full job description text here if the auto-scraper didn't capture everything"
+    )
+    
     def clean_url(self):
         url = self.cleaned_data['url']
         

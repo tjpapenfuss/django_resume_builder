@@ -33,16 +33,32 @@
                     <div class="alert alert-error">{{ form.url.errors }}</div>
                 {% endif %}
             </div>
+
+            <!-- New manual description field -->
+            <div class="form-group">
+                <label for="{{ form.manual_description.id_for_label }}">Manual Job Description (Optional)</label>
+                {{ form.manual_description }}
+                {% if form.manual_description.help_text %}
+                    <small class="help-text">{{ form.manual_description.help_text }}</small>
+                {% endif %}
+                {% if form.manual_description.errors %}
+                    <div class="alert alert-error">{{ form.manual_description.errors }}</div>
+                {% endif %}
+            </div>
             
             <div class="alert alert-info" style="background-color: #e3f2fd; border: 1px solid #bbdefb; color: #1976d2;">
-                <strong>Supported platforms:</strong> Greenhouse, Lever, Workday, and most company career pages
+                <strong>How it works:</strong><br>
+                • First, we'll try to automatically scrape the job details from the URL<br>
+                • If the auto-scraper misses information, you can paste the full job description in the text area above<br>
+                • Manual input will override auto-scraped content for better accuracy
             </div>
             
             <div class="actions">
-                <button type="submit" class="btn btn-primary">Scrape Job Description</button>
+                <button type="submit" class="btn btn-primary">Process Job Description</button>
                 <a href="{% url 'job_list' %}" class="btn btn-secondary">Back to My Jobs</a>
             </div>
         </form>
+    </div>
         
         <div class="details-section">
             <h3>How it works:</h3>

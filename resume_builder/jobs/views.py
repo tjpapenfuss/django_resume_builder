@@ -12,16 +12,25 @@ import json
 
 @login_required
 def add_job_from_url(request):
-    """Add a job by scraping from URL"""
+    """Add a job by scraping from URL or manual input"""
     if request.method == 'POST':
         form = JobURLForm(request.POST)
         if form.is_valid():
             url = form.cleaned_data['url']
+            manual_description = form.cleaned_data.get('manual_description', '').strip()
             
             try:
                 # Check if job already exists
                 existing_job = JobPosting.objects.filter(url=url).first()
                 if existing_job:
+                    # If manual description provided, update the existing job
+                    if manual_description:
+                        scraper = JobDescriptionScraper()
+                        updated_job = scraper.update_job_with_manual_input(
+                            existing_job, manual_description
+                        )
+                        messages.success(request, f'Updated job with manual description: {updated_job.job_title}')
+                    
                     # Create application record if doesn't exist
                     application, created = JobApplication.objects.get_or_create(
                         user=request.user,
@@ -36,9 +45,21 @@ def add_job_from_url(request):
                     
                     return redirect('job_detail', pk=existing_job.pk)
                 
-                # Scrape new job
+                # Create new job
                 scraper = JobDescriptionScraper()
-                job_posting = scraper.scrape_job_from_url(url, request.user)
+                
+                if manual_description:
+                    # Use manual description
+                    job_posting = scraper.create_job_from_manual_input(
+                        url=url,
+                        manual_text=manual_description,
+                        user=request.user
+                    )
+                    messages.success(request, f'Successfully created job from manual input: {job_posting.job_title} at {job_posting.company_name}')
+                else:
+                    # Use auto-scraping
+                    job_posting = scraper.scrape_job_from_url(url, request.user)
+                    messages.success(request, f'Successfully scraped job: {job_posting.job_title} at {job_posting.company_name}')
                 
                 # Create application record for user
                 JobApplication.objects.create(
@@ -47,11 +68,10 @@ def add_job_from_url(request):
                     status='saved'
                 )
                 
-                messages.success(request, f'Successfully added job: {job_posting.job_title} at {job_posting.company_name}')
                 return redirect('job_detail', pk=job_posting.pk)
                 
             except Exception as e:
-                messages.error(request, f'Failed to scrape job: {str(e)}')
+                messages.error(request, f'Failed to process job: {str(e)}')
     else:
         form = JobURLForm()
     
