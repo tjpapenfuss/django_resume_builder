@@ -188,10 +188,14 @@ def job_skills_api(request, pk):
 @login_required
 def dashboard(request):
     """Dashboard showing job application stats"""
-    applications = JobApplication.objects.filter(user=request.user)
+    # Filter out applications with missing jobs
+    applications = JobApplication.objects.filter(
+        user=request.user,
+        job_posting__isnull=False  
+    ).select_related('job_posting')  
     
     stats = {
-        'total_saved': applications.count(),
+        'total_saved': applications.filter(status='saved').count(),  
         'applied': applications.filter(status='applied').count(),
         'interviewing': applications.filter(status__in=['phone_screen', 'interview']).count(),
         'recent_jobs': applications.order_by('-created_at')[:5]
