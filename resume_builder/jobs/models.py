@@ -82,6 +82,11 @@ class JobPosting(models.Model):
     def ai_experience_requirements(self):
         """Get AI-extracted experience requirements"""
         return self.ai_analysis.get('experience_years', '')
+        
+    @property
+    def ai_technologies(self):
+        """Extract AI-identified technologies from JSON"""
+        return self.ai_analysis.get('technologies_mentioned', [])
 
     @property
     def has_ai_analysis(self):

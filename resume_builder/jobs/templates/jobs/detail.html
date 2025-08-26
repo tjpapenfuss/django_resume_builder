@@ -120,6 +120,17 @@
                 </div>
             </div>
         {% endif %}
+        <!-- Add this after the skills sections -->
+        {% if job.ai_analysis.technologies_mentioned %}
+        <div class="form-group">
+            <label>Technologies & Tools <span class="ai-badge">✨ AI Extracted</span></label>
+            <div class="skill-tags">
+                {% for tech in job.ai_analysis.technologies_mentioned %}
+                    <span class="skill-badge skill-technology">{{ tech }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
 
         <div class="form-row">
             {% if job.ai_analysis.experience_years %}
@@ -449,6 +460,12 @@
     background-color: #e8f5e8;
     color: #2e7d32;
     border: 1px solid #c8e6c8;
+}
+
+.skill-technology {
+    background-color: #fff3e0;
+    color: #f57c00;
+    border: 1px solid #ffcc02;
 }
 
 .keyword-chip {

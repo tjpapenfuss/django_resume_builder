@@ -25,6 +25,7 @@ def analyze_job_with_ai(job_posting):
         {{
           "required_skills": ["skill1", "skill2"],
           "preferred_skills": ["skill1", "skill2"],
+          "technologies_mentioned": ["Azure", "Databricks", "GCP", "AWS", "Python", "Snowflake", "Spark", "SQL"],
           "experience_years": "X years minimum",
           "education_requirements": "Bachelor's degree preferred",
           "key_responsibilities": ["responsibility1", "responsibility2"],
@@ -38,15 +39,21 @@ def analyze_job_with_ai(job_posting):
         Job Description:
         {description}
         """
-        
+
         response = client.chat.completions.create(
-            model="gpt-4o-mini",
+            model="gpt-3.5-turbo",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1
         )
         
-        ai_analysis = json.loads(response.choices[0].message.content)
-        
+        # Extract the content from the response object
+        response_content = response.choices[0].message.content
+        if not response_content:
+            print("NO RESPONSE CONTENT!!!")
+            return {}
+
+        ai_analysis = json.loads(response_content)
+
         # Store in raw_json (Option 1)
         job_posting.raw_json['ai_analysis'] = ai_analysis
         job_posting.raw_json['ai_analyzed_at'] = timezone.now().isoformat()

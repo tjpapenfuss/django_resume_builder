@@ -10,6 +10,7 @@ from .models import JobPosting, JobApplication
 from .services.job_scraper import JobDescriptionScraper
 import json
 from .services.ai_analyzer import analyze_job_with_ai
+from django.views.decorators.http import require_http_methods
 
 @login_required
 def add_job_from_url(request):
@@ -220,3 +221,30 @@ def job_detail(request, pk):
     }
     
     return render(request, 'jobs/detail.html', context)
+
+@require_http_methods(["POST"])
+@login_required
+def analyze_job_api(request, pk):
+    """API endpoint to trigger AI analysis for a job"""
+    try:
+        job = get_object_or_404(JobPosting, pk=pk, added_by=request.user)
+        
+        # Call your AI analysis function
+        ai_analysis = analyze_job_with_ai(job)
+        
+        if ai_analysis:
+            return JsonResponse({
+                'success': True,
+                'message': 'Job analyzed successfully'
+            })
+        else:
+            return JsonResponse({
+                'success': False,
+                'message': 'AI analysis failed'
+            }, status=500)
+            
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=500)

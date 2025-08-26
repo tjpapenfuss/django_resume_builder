@@ -475,13 +475,42 @@ document.addEventListener('DOMContentLoaded', function() {
             } else {
                 clearInterval(stepInterval);
             }
-        }, 8000); // Move to next step every 8 seconds
+        }, 5000); // Move to next step every 5 seconds
     }
     
     function showProcessingOverlay() {
         overlay.classList.add('show');
         document.body.style.overflow = 'hidden';
         startProcessingSteps();
+    }
+
+    function analyzeWithAI(jobId) {
+        const button = event.target;
+        button.disabled = true;
+        button.innerHTML = 'Analyzing...';
+        
+        fetch(`/jobs/api/job/${jobId}/analyze/`, {  // Make sure this matches your URL pattern
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            }
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('AI analysis failed: ' + data.message);
+                button.disabled = false;
+                button.innerHTML = 'Analyze with AI';
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            alert('AI analysis failed. Please try again.');
+            button.disabled = false;
+            button.innerHTML = 'Analyze with AI';
+        });
     }
     
     function hideProcessingOverlay() {
