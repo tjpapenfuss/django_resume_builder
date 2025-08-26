@@ -40,7 +40,7 @@ def analyze_job_with_ai(job_posting):
         """
         
         response = client.chat.completions.create(
-            model="gpt-4",
+            model="gpt-4o-mini",
             messages=[{"role": "user", "content": prompt}],
             temperature=0.1
         )
