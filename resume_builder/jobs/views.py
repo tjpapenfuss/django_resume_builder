@@ -9,6 +9,7 @@ from .forms import JobURLForm
 from .models import JobPosting, JobApplication
 from .services.job_scraper import JobDescriptionScraper
 import json
+from .services.ai_analyzer import analyze_job_with_ai
 
 @login_required
 def add_job_from_url(request):
@@ -127,14 +128,13 @@ def job_detail(request, pk):
     scraped_content = json_data.get('scraped_content', {})
     parsed_requirements = json_data.get('parsed_requirements', {})
     matching_opportunities = json_data.get('matching_opportunities', {})
-    
     context = {
         'job': job,
         'application': application,
-        'scraped_content': scraped_content,
-        'parsed_requirements': parsed_requirements,
+        'parsed_requirements': job.raw_json.get('parsed_requirements', {}),
+        'scraped_content': job.raw_json.get('scraped_content', {}),
+        # AI analysis is accessed via job.ai_analysis property
         'matching_opportunities': matching_opportunities,
-        'json_data': json.dumps(json_data, indent=2)  # For debugging
     }
     
     return render(request, 'jobs/detail.html', context)
@@ -202,3 +202,21 @@ def dashboard(request):
     }
     
     return render(request, 'jobs/dashboard.html', {'stats': stats})
+
+# Usage in your views:
+def job_detail(request, pk):
+    job = get_object_or_404(JobPosting, pk=pk)
+    application = get_object_or_404(JobApplication, user=request.user, job_posting=job)
+
+    # Get or create AI analysis
+    ai_analysis = analyze_job_with_ai(job)
+    
+    context = {
+        'job': job,
+        'application': application,
+        'parsed_requirements': job.raw_json.get('parsed_requirements', {}),
+        'ai_analysis': ai_analysis,  # Add this to your context
+        'scraped_content': job.raw_json.get('scraped_content', {}),
+    }
+    
+    return render(request, 'jobs/detail.html', context)

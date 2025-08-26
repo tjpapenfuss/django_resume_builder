@@ -26,6 +26,10 @@ BASE_DIR = Path(__file__).resolve().parent.parent
 # SECURITY WARNING: keep the secret key used in production secret!
 SECRET_KEY = os.getenv('DJANGO_PROJECT_SECRET_KEY', None)
 
+# AI API Keys
+OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', None)
+ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', None) 
+
 # SECURITY WARNING: don't run with debug turned on in production!
 DEBUG = True
 

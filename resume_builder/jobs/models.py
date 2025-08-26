@@ -63,6 +63,31 @@ class JobPosting(models.Model):
         """Extract specific requirements for matching"""
         return self.raw_json.get('parsed_requirements', {}).get('specific_requirements', [])
 
+    @property
+    def ai_analysis(self):
+        """Extract AI-powered analysis from JSON"""
+        return self.raw_json.get('ai_analysis', {})
+
+    @property
+    def ai_required_skills(self):
+        """Get AI-extracted required skills"""
+        return self.ai_analysis.get('required_skills', [])
+
+    @property
+    def ai_preferred_skills(self):
+        """Get AI-extracted preferred skills"""
+        return self.ai_analysis.get('preferred_skills', [])
+
+    @property
+    def ai_experience_requirements(self):
+        """Get AI-extracted experience requirements"""
+        return self.ai_analysis.get('experience_years', '')
+
+    @property
+    def has_ai_analysis(self):
+        """Check if AI analysis has been performed"""
+        return 'ai_analysis' in self.raw_json and bool(self.raw_json['ai_analysis'])
+
 class JobApplication(models.Model):
     """Track user applications to specific jobs"""
     STATUS_CHOICES = [
