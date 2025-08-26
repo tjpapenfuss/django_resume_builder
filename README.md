@@ -82,5 +82,5 @@ OPENAI_API_KEY = 'sk-proj-********'
 
 Run the script
 ```bash
-python sp500.py
+python manage.py runserver
 ```
