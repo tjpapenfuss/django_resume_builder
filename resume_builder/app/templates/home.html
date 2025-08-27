@@ -11,7 +11,7 @@
     
     {% if user.is_authenticated %}
         <div style="text-align: center; margin-top: 30px;">
-            <a href="{% url 'profile' %}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">Go to Profile</a>
+            <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-primary" style="background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); color: white; padding: 12px 30px; border-radius: 10px; text-decoration: none; font-weight: 600;">Go to Dashboard</a>
         </div>
     {% else %}
         <div style="text-align: center; margin-top: 30px;">

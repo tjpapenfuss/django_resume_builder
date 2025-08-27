@@ -653,6 +653,18 @@
             </div>
 
             {% if user.is_authenticated %}
+
+            <!-- Job Section Building -->
+            <div class="nav-section">
+                <div class="nav-section-title">Job Section</div>
+                <a href="{% url 'jobs:job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
+                    <span class="nav-item-icon">🎓</span>Job Dashboard
+                </a>
+                <a href="{% url 'jobs:job_list' %}" class="nav-item {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
+                    <span class="nav-item-icon">💼</span>Job List
+                </a>
+            </div>
+            
             <!-- Resume Building -->
             <div class="nav-section">
                 <div class="nav-section-title">Resume Building</div>
@@ -672,17 +684,6 @@
                     <a href="#" class="nav-item">
                     <span class="nav-item-icon">🏆</span>Add Achievements
                 </a> -->
-            </div>
-
-            <!-- Job Section Building -->
-            <div class="nav-section">
-                <div class="nav-section-title">Job Section</div>
-                <a href="{% url 'jobs:job_list' %}" class="nav-item {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
-                    <span class="nav-item-icon">💼</span>Job List
-                </a>
-                <a href="{% url 'jobs:job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
-                    <span class="nav-item-icon">🎓</span>Job Dashboard
-                </a>
             </div>
 
             <!-- Resume Management -->
