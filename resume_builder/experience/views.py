@@ -70,7 +70,6 @@ def experiences(request):
     })
 
 @login_required
-@require_http_methods(["POST"])
 def add_experience(request):
     """Add a new experience"""
     form = ExperienceForm(request.POST, user=request.user)
@@ -79,7 +78,7 @@ def add_experience(request):
         experience.user = request.user  # attach user to entry
         experience.save()
         messages.success(request, 'Experience entry added successfully!')
-        return redirect('experience')
+        return redirect('experience:experience')
     else:
         # If invalid, reload page with errors + current experiences
         experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
@@ -97,6 +96,53 @@ def add_experience(request):
             }
         })
 
+@login_required
+def add_experience(request):
+    """Add new experience, with optional skill pre-population"""
+    if request.method == 'POST':
+        # Handle form submission (existing code)
+        form = ExperienceForm(request.POST, user=request.user)
+        if form.is_valid():
+            experience = form.save(commit=False)
+            experience.user = request.user  # attach user to entry
+            experience.save()
+            messages.success(request, 'Experience entry added successfully!')
+            return redirect('experience:experience')
+    else:
+        # GET request - pre-populate form from URL parameters
+        initial_data = {}
+        suggested_skill = request.GET.get('suggested_skill', '')
+        story_prompt = request.GET.get('story_prompt', '')
+        
+        if suggested_skill:
+            initial_data['skills_used_text'] = suggested_skill
+            initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
+            
+        if story_prompt:
+            initial_data['description'] = f"Story prompt: {story_prompt}\n\n"
+        
+        form = ExperienceForm(initial=initial_data)
+    
+    # Build context for both GET and POST (with form errors)
+    experiences = Experience.objects.filter(user=request.user).order_by('-created_date')
+    experience_types = Experience.EXPERIENCE_TYPES
+    suggested_skill = request.GET.get('suggested_skill', '')
+    
+    context = {
+        'experiences': experiences,
+        'form': form,
+        'experience_types': experience_types,
+        'current_filters': {
+            'type': 'all',
+            'context': 'all',
+            'search': '',
+            'visibility': 'all',
+        },
+        'suggested_skill': suggested_skill,
+        'from_skill_analysis': bool(suggested_skill),
+    }
+    
+    return render(request, 'experience.html', context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -109,7 +155,7 @@ def update_experience(request, experience_id):
     if form.is_valid():
         form.save()
         messages.success(request, 'Experience entry updated successfully!')
-        return redirect('experience')
+        return redirect('experience:experience')
     else:
         # If request came from AJAX, return JSON errors
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -142,7 +188,7 @@ def delete_experience(request, experience_id):
     experience = get_object_or_404(Experience, experience_id=experience_id, user=request.user)
     experience.delete()
     messages.success(request, 'Experience entry deleted successfully!')
-    return redirect('experience')
+    return redirect('experience:experience')
 
 @login_required
 def get_experience_data(request, experience_id):

@@ -47,8 +47,8 @@
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
-                <a href="{% url 'job_list' %}" class="btn btn-secondary btn-sm">Clear All</a>
-                <a href="{% url 'add_job_from_url' %}" class="btn btn-primary btn-sm">Add New Job</a>
+                <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary btn-sm">Clear All</a>
+                <a href="{% url 'jobs:add_job_from_url' %}" class="btn btn-primary btn-sm">Add New Job</a>
             </div>
         </form>
     </div>
@@ -164,8 +164,8 @@
                     </div>
 
                     <div class="card-actions-buttons">
-                        <a href="{% url 'job_detail' application.job_posting.pk %}" class="btn btn-primary">View Full Details</a>
-                        <a href="{% url 'job_delete' application.job_posting.pk %}" class="btn btn-danger">Remove Job</a>
+                        <a href="{% url 'jobs:job_detail' application.job_posting.pk %}" class="btn btn-primary">View Full Details</a>
+                        <a href="{% url 'jobs:job_delete' application.job_posting.pk %}" class="btn btn-danger">Remove Job</a>
                         <button type="button" class="btn btn-secondary" onclick="toggleCard('{{ application.job_posting.pk }}')">Collapse</button>
                     </div>
                 </div>
@@ -173,10 +173,10 @@
         {% empty %}
             <div class="empty-state">
                 {% if search_query or status_filter %}
-                    <p>No jobs match your current filters. <a href="{% url 'job_list' %}">Clear filters</a> to see all jobs.</p>
+                    <p>No jobs match your current filters. <a href="{% url 'jobs:job_list' %}">Clear filters</a> to see all jobs.</p>
                 {% else %}
                     <p>No jobs saved yet. Add your first one!</p>
-                    <a href="{% url 'add_job_from_url' %}" class="btn btn-primary">Add Your First Job</a>
+                    <a href="{% url 'jobs:add_job_from_url' %}" class="btn btn-primary">Add Your First Job</a>
                 {% endif %}
             </div>
         {% endfor %}

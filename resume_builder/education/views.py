@@ -30,7 +30,7 @@ def add_education(request):
         education.user = request.user
         education.save()
         messages.success(request, 'Education entry added successfully!')
-        return redirect('education')
+        return redirect('education:education')
     else:
         educations = Education.objects.filter(user=request.user).order_by('-date_started', '-created_date')
         return render(request, 'education.html', {
@@ -48,7 +48,7 @@ def update_education(request, education_id):
     if form.is_valid():
         form.save()
         messages.success(request, 'Education entry updated successfully!')
-        return redirect('education')
+        return redirect('education:education')
     else:
         # Return JSON response with errors for AJAX handling
         if request.headers.get('X-Requested-With') == 'XMLHttpRequest':
@@ -71,7 +71,7 @@ def delete_education(request, education_id):
     education = get_object_or_404(Education, education_id=education_id, user=request.user)
     education.delete()
     messages.success(request, 'Education entry deleted successfully!')
-    return redirect('education')
+    return redirect('education:education')
 
 @login_required
 def get_education_data(request, education_id):

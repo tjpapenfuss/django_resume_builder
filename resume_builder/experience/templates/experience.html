@@ -66,7 +66,7 @@
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
-                <a href="{% url 'experience' %}" class="btn btn-secondary btn-sm">Clear All</a>
+                <a href="{% url 'experience:experience' %}" class="btn btn-secondary btn-sm">Clear All</a>
             </div>
         </form>
     </div>
@@ -119,7 +119,7 @@
 
                 <!-- Collapsible Content -->
                 <div class="card-content" id="content-{{ experience.experience_id }}" style="display: none;">
-                    <form method="post" action="{% url 'update_experience' experience.experience_id %}" class="experience-form">
+                    <form method="post" action="{% url 'experience:update_experience' experience.experience_id %}" class="experience-form">
                         {% csrf_token %}
 
                         <div class="form-row">
@@ -308,7 +308,7 @@
         {% empty %}
             <div class="empty-state">
                 {% if current_filters.search or current_filters.type != 'all' or current_filters.context != 'all' %}
-                    <p>No experiences match your current filters. <a href="{% url 'experiences' %}">Clear filters</a> to see all experiences.</p>
+                    <p>No experiences match your current filters. <a href="{% url 'experience:experience' %}">Clear filters</a> to see all experiences.</p>
                 {% else %}
                     <p>No experience entries yet. Add your first one below!</p>
                 {% endif %}
@@ -320,7 +320,7 @@
     <div class="form-section">
         <h2>Add New Experience</h2>
         
-        <form method="post" action="{% url 'add_experience' %}">
+        <form method="post" action="{% url 'experience:add_experience' %}">
             {% csrf_token %}
             
             <div class="form-row">

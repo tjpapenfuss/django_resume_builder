@@ -1,0 +1,754 @@
+{% extends 'base.html' %}
+
+{% block title %}Skill Analysis Results - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Skill Gap Analysis Results</h1>
+        <p>Analysis completed on {{ analysis.created_at|date:"F d, Y at g:i A" }}</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Analysis Overview -->
+    <div class="analysis-overview">
+        <div class="overview-card">
+            <h2>Analysis Summary</h2>
+            <div class="summary-grid">
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.total_skill_gaps }}</span>
+                    <span class="summary-label">Skill Gaps Found</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.average_job_match_score|floatformat:0 }}%</span>
+                    <span class="summary-label">Average Job Match</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.total_skills_found }}</span>
+                    <span class="summary-label">Total Skills</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.new_skills_created }}</span>
+                    <span class="summary-label">New Skills Added</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.total_experiences_analyzed }}</span>
+                    <span class="summary-label">Experiences Analyzed</span>
+                </div>
+                <div class="summary-item">
+                    <span class="summary-number">{{ analysis.total_jobs_analyzed }}</span>
+                    <span class="summary-label">Jobs Analyzed</span>
+                </div>
+            </div>
+        </div>
+
+        {% if analysis.needs_refresh %}
+            <div class="refresh-alert">
+                <h3>Analysis May Be Outdated</h3>
+                <p>Your profile has changed since this analysis was run. Consider running a fresh analysis for updated results.</p>
+                <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-primary">Run New Analysis</a>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- Skill Gaps Section -->
+    {% if analysis.skill_gaps %}
+        <div class="section-card">
+            <div class="section-header">
+                <h2>Top Skill Gaps</h2>
+                <p>Skills that appear frequently in your saved jobs but aren't in your profile</p>
+            </div>
+            
+            <div class="skill-gaps-list">
+                {% for gap in analysis.skill_gaps %}
+                    <div class="skill-gap-item">
+                        <div class="gap-main-info">
+                            <h3 class="gap-skill-name">{{ gap.skill_name }}</h3>
+                            <div class="gap-details">
+                                <span class="gap-type">{{ gap.skill_type }} Skill</span>
+                                <span class="gap-frequency">Appears in {{ gap.frequency }} of {{ analysis.total_jobs_analyzed }} jobs</span>
+                                <span class="gap-percentage">{{ gap.percentage_of_jobs|floatformat:0 }}% of saved jobs</span>
+                            </div>
+                        </div>
+                        
+                        <div class="gap-actions">
+                            <div class="gap-priority priority-{{ gap.priority_score|floatformat:0|cut:".0" }}">
+                                Priority: {{ gap.priority_score|floatformat:1 }}
+                            </div>
+                            <a href="{% url 'experience:add_experience' %}?suggested_skill={{ gap.skill_name|urlencode }}" 
+                               class="btn btn-primary btn-sm">
+                                Add Experience
+                            </a>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Job Match Analysis -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2>Job Match Analysis</h2>
+            <p>How well your skills align with each saved job</p>
+        </div>
+        
+        <div class="job-matches-list">
+            {% for match in analysis.job_matches %}
+                <div class="job-match-card" onclick="toggleJobMatch('{{ forloop.counter }}')">
+                    <div class="match-header">
+                        <div class="job-info">
+                            <h3 class="job-title">{{ match.job_title }}</h3>
+                            <p class="job-company">{{ match.company_name }}</p>
+                            <div class="match-summary">
+                                <span class="matched-count">{{ match.total_matched }}/{{ match.total_job_skills }} skills matched</span>
+                            </div>
+                        </div>
+                        
+                        <div class="match-score-section">
+                            <div class="match-percentage {% if match.match_percentage >= 80 %}match-excellent{% elif match.match_percentage >= 60 %}match-good{% elif match.match_percentage >= 40 %}match-fair{% else %}match-poor{% endif %}">
+                                {{ match.match_percentage|floatformat:0 }}%
+                            </div>
+                            <span class="match-label">Match</span>
+                        </div>
+                        
+                        <div class="expand-toggle">
+                            <span class="expand-icon">▼</span>
+                        </div>
+                    </div>
+                    
+                    <div class="match-details" id="job-match-{{ forloop.counter }}" style="display: none;">
+                        <div class="skills-breakdown">
+                            <div class="matched-skills-section">
+                                <h4>Matched Skills ({{ match.matched_skills|length }})</h4>
+                                <div class="skills-tags">
+                                    {% for skill in match.matched_skills %}
+                                        <span class="skill-tag matched">{{ skill }}</span>
+                                    {% empty %}
+                                        <p class="no-skills">No matched skills</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                            
+                            <div class="missing-skills-section">
+                                <h4>Missing Skills ({{ match.missing_skills|length }})</h4>
+                                <div class="skills-tags">
+                                    {% for skill in match.missing_skills %}
+                                        <span class="skill-tag missing">{{ skill }}</span>
+                                    {% empty %}
+                                        <p class="no-skills">No missing skills</p>
+                                    {% endfor %}
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <div class="job-actions">
+                            <a href="{% url 'jobs:job_detail' match.job_id %}" class="btn btn-primary btn-sm">
+                                View Job Details
+                            </a>
+                            <button data-job-id="{{ match.job_id }}" 
+                                    data-missing-count="{{ match.missing_skills|length|default:0 }}"
+                                    onclick="generateSkillStories(this.dataset.jobId, this.dataset.missingCount)" 
+                                    class="btn btn-secondary btn-sm">
+                                Get Story Suggestions
+                            </button>
+                        </div>
+                        
+                        <!-- Story suggestions area -->
+                        <div class="story-suggestions" id="suggestions-{{ match.job_id }}" style="display: none;">
+                            <h5>Experience Story Suggestions</h5>
+                            <div class="suggestions-content">
+                                <!-- Will be populated by JavaScript -->
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            {% empty %}
+                <div class="no-matches">
+                    <p>No job matches found. Make sure you have saved some jobs to analyze.</p>
+                </div>
+            {% endfor %}
+        </div>
+    </div>
+
+    <!-- Action Items -->
+    <div class="section-card">
+        <div class="section-header">
+            <h2>Recommended Next Steps</h2>
+        </div>
+        
+        <div class="action-items">
+            {% if analysis.skill_gaps %}
+                <div class="action-item">
+                    <h3>1. Address Top Skill Gaps</h3>
+                    <p>Focus on the highest-priority skills: 
+                        {% for gap in analysis.top_skill_gaps %}
+                            <strong>{{ gap.skill_name }}</strong>{% if not forloop.last %}, {% endif %}
+                        {% endfor %}
+                    </p>
+                    <a href="{% url 'experience:add_experience' %}" class="btn btn-primary">Add New Experience</a>
+                </div>
+            {% endif %}
+            
+            <div class="action-item">
+                <h3>2. Update Your Skills Profile</h3>
+                <p>Review and update your skills with more details and accurate proficiency levels.</p>
+                <a href="{% url 'skills:skills' %}" class="btn btn-secondary">Manage Skills</a>
+            </div>
+            
+            <div class="action-item">
+                <h3>3. Focus on High-Match Jobs</h3>
+                <p>Prioritize applications for jobs where you match 70%+ of requirements.</p>
+                <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary">View All Jobs</a>
+            </div>
+        </div>
+    </div>
+
+    <!-- Analysis Actions -->
+    <div class="analysis-actions">
+        <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-primary">Run New Analysis</a>
+        <a href="{% url 'skills:skills' %}" class="btn btn-secondary">Manage Skills</a>
+        <a href="{% url 'experience:experience' %}" class="btn btn-secondary">View Experiences</a>
+        
+        <!-- Analysis status update -->
+        {% if analysis.status == 'fresh' or analysis.status == 'in_progress' %}
+            <button onclick="markAnalysisComplete()" class="btn btn-success">Mark Complete</button>
+        {% endif %}
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.analysis-overview {
+    margin-bottom: 3rem;
+}
+
+.overview-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 1rem;
+}
+
+.overview-card h2 {
+    margin: 0 0 1.5rem 0;
+    text-align: center;
+}
+
+.summary-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 1.5rem;
+}
+
+.summary-item {
+    text-align: center;
+}
+
+.summary-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.summary-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.refresh-alert {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 8px;
+    padding: 1.5rem;
+    color: #856404;
+}
+
+.refresh-alert h3 {
+    margin: 0 0 0.5rem 0;
+}
+
+.refresh-alert p {
+    margin: 0 0 1rem 0;
+}
+
+.section-card {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.section-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.section-header h2 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.section-header p {
+    margin: 0;
+    color: #666;
+}
+
+.skill-gaps-list {
+    padding: 1rem 0;
+}
+
+.skill-gap-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.skill-gap-item:hover {
+    background-color: #f8f9fa;
+}
+
+.skill-gap-item:last-child {
+    border-bottom: none;
+}
+
+.gap-main-info h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.gap-details {
+    display: flex;
+    gap: 1rem;
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.gap-type {
+    font-weight: 500;
+}
+
+.gap-actions {
+    display: flex;
+    align-items: center;
+    gap: 1rem;
+}
+
+.gap-priority {
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.priority-high, .priority-80, .priority-90, .priority-100 {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.priority-medium, .priority-50, .priority-60, .priority-70 {
+    background: #fff3e0;
+    color: #ef6c00;
+}
+
+.priority-low, .priority-30, .priority-40 {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.job-matches-list {
+    padding: 1rem;
+}
+
+.job-match-card {
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    margin-bottom: 1rem;
+    background: white;
+    cursor: pointer;
+    transition: box-shadow 0.2s;
+}
+
+.job-match-card:hover {
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.match-header {
+    display: flex;
+    align-items: center;
+    padding: 1rem;
+    gap: 1rem;
+}
+
+.job-info {
+    flex: 1;
+}
+
+.job-info h3 {
+    margin: 0 0 0.25rem 0;
+    color: #333;
+}
+
+.job-info p {
+    margin: 0 0 0.5rem 0;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.match-summary {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.match-score-section {
+    text-align: center;
+    min-width: 80px;
+}
+
+.match-percentage {
+    font-size: 1.5rem;
+    font-weight: bold;
+    margin-bottom: 0.25rem;
+}
+
+.match-excellent { color: #2e7d32; }
+.match-good { color: #388e3c; }
+.match-fair { color: #f57c00; }
+.match-poor { color: #d32f2f; }
+
+.match-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.expand-toggle {
+    padding: 0.5rem;
+}
+
+.expand-icon {
+    transition: transform 0.2s;
+    font-size: 1.2rem;
+    color: #666;
+}
+
+.job-match-card.expanded .expand-icon {
+    transform: rotate(180deg);
+}
+
+.match-details {
+    padding: 1rem;
+    border-top: 1px solid #e9ecef;
+    background: #f8f9fa;
+}
+
+.skills-breakdown {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.matched-skills-section h4,
+.missing-skills-section h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.skills-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-tag {
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-tag.matched {
+    background: #e8f5e8;
+    color: #2e7d32;
+}
+
+.skill-tag.missing {
+    background: #ffebee;
+    color: #c62828;
+}
+
+.no-skills {
+    margin: 0;
+    color: #999;
+    font-style: italic;
+}
+
+.job-actions {
+    display: flex;
+    gap: 0.5rem;
+    margin-top: 1rem;
+    padding-top: 1rem;
+    border-top: 1px solid #dee2e6;
+}
+
+.story-suggestions {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #f0f8ff;
+    border: 1px solid #b3d9ff;
+    border-radius: 6px;
+}
+
+.story-suggestions h5 {
+    margin: 0 0 0.5rem 0;
+    color: #0066cc;
+}
+
+.action-items {
+    padding: 2rem;
+}
+
+.action-item {
+    margin-bottom: 2rem;
+    padding-bottom: 2rem;
+    border-bottom: 1px solid #e9ecef;
+}
+
+.action-item:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+    padding-bottom: 0;
+}
+
+.action-item h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.action-item p {
+    margin: 0 0 1rem 0;
+    color: #666;
+}
+
+.analysis-actions {
+    text-align: center;
+    padding: 2rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.btn {
+    display: inline-block;
+    padding: 0.5rem 1rem;
+    margin: 0.25rem;
+    border: none;
+    border-radius: 4px;
+    text-decoration: none;
+    font-size: 0.9rem;
+    cursor: pointer;
+    transition: background-color 0.2s;
+}
+
+.btn-sm {
+    padding: 0.375rem 0.75rem;
+    font-size: 0.875rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .summary-grid {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+    
+    .summary-number {
+        font-size: 1.5rem;
+    }
+    
+    .match-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .match-score-section {
+        align-self: flex-end;
+        margin-top: -2rem;
+    }
+    
+    .skills-breakdown {
+        grid-template-columns: 1fr;
+        gap: 1rem;
+    }
+    
+    .gap-details {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+    
+    .skill-gap-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+    }
+    
+    .gap-actions {
+        align-self: stretch;
+        justify-content: space-between;
+    }
+}
+</style>
+
+<script>
+function toggleJobMatch(matchId) {
+    const detailsDiv = document.getElementById(`job-match-${matchId}`);
+    const card = detailsDiv.closest('.job-match-card');
+    
+    if (detailsDiv.style.display === 'none') {
+        detailsDiv.style.display = 'block';
+        card.classList.add('expanded');
+    } else {
+        detailsDiv.style.display = 'none';
+        card.classList.remove('expanded');
+    }
+}
+
+function generateSkillStories(jobId, missingSkillsCount) {
+    const suggestionsDiv = document.getElementById(`suggestions-${jobId}`);
+    
+    if (suggestionsDiv.style.display === 'none') {
+        // Show suggestions
+        suggestionsDiv.style.display = 'block';
+        
+        // You can expand this to make an AJAX call to get specific suggestions
+        const content = suggestionsDiv.querySelector('.suggestions-content');
+        if (content.innerHTML === '') {
+            content.innerHTML = `
+                <p>Consider adding experiences that demonstrate the missing skills for this job.</p>
+                <a href="/experience/add/?target_job=${jobId}" class="btn btn-primary btn-sm">
+                    Add Targeted Experience
+                </a>
+            `;
+        }
+    } else {
+        suggestionsDiv.style.display = 'none';
+    }
+}
+
+function markAnalysisComplete() {
+    if (confirm('Mark this analysis as complete? This indicates you\'ve reviewed and acted on the recommendations.')) {
+        // Make AJAX call to update analysis status
+        const analysisId = window.location.pathname.split('/').pop().replace('/', '');
+        
+        fetch(`/skills/api/mark-complete/${analysisId}/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+                'Content-Type': 'application/json',
+            },
+        })
+        .then(response => response.json())
+        .then(data => {
+            if (data.success) {
+                location.reload();
+            } else {
+                alert('Failed to update analysis status.');
+            }
+        })
+        .catch(error => {
+            console.error('Error:', error);
+        });
+    }
+}
+
+// Add CSRF token to page
+document.addEventListener('DOMContentLoaded', function() {
+    // Add a hidden CSRF token if not already present
+    if (!document.querySelector('[name=csrfmiddlewaretoken]')) {
+        const csrfInput = document.createElement('input');
+        csrfInput.type = 'hidden';
+        csrfInput.name = 'csrfmiddlewaretoken';
+        csrfInput.value = '{{ csrf_token }}';
+        document.body.appendChild(csrfInput);
+    }
+});
+</script>
+{% endblock %}

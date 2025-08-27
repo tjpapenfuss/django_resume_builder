@@ -1,12 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}Skills - Resume Builder{% endblock %}
+{% block title %}Skills & Analysis - Resume Builder{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
         <h1>Skills & Expertise</h1>
-        <p>Manage your professional skills and technical expertise</p>
+        <p>Manage your professional skills and view analysis results</p>
     </div>
 
     {% if messages %}
@@ -15,6 +15,48 @@
                 {{ message }}
             </div>
         {% endfor %}
+    {% endif %}
+
+    <!-- Skill Analysis Summary Section -->
+    {% if latest_analysis %}
+        <div class="analysis-summary-section">
+            <div class="analysis-summary-card">
+                <div class="summary-header">
+                    <h3>Latest Skill Analysis</h3>
+                    <span class="analysis-date">{{ latest_analysis.staleness_indicator }}</span>
+                </div>
+                
+                <div class="summary-stats">
+                    <div class="summary-stat">
+                        <span class="stat-number">{{ latest_analysis.total_skill_gaps }}</span>
+                        <span class="stat-label">Skill Gaps</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-number">{{ latest_analysis.average_job_match_score|floatformat:0 }}%</span>
+                        <span class="stat-label">Avg Job Match</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-number">{{ skills|length }}</span>
+                        <span class="stat-label">Skills Tracked</span>
+                    </div>
+                    <div class="summary-stat">
+                        <span class="stat-number">{{ total_experiences }}</span>
+                        <span class="stat-label">Experiences</span>
+                    </div>
+                </div>
+                
+                <div class="summary-actions">
+                    <a href="{% url 'skills:skill_analysis_detail' latest_analysis.analysis_id %}" class="btn btn-primary btn-sm">
+                        View Full Analysis
+                    </a>
+                    {% if latest_analysis.needs_refresh %}
+                        <button onclick="runQuickAnalysis()" class="btn btn-secondary btn-sm">
+                            Refresh Analysis
+                        </button>
+                    {% endif %}
+                </div>
+            </div>
+        </div>
     {% endif %}
 
     <!-- Filter and Search Section -->
@@ -57,7 +99,7 @@
             </div>
             <div class="filter-actions">
                 <button type="submit" class="btn btn-primary btn-sm">Apply Filters</button>
-                <a href="{% url 'skills' %}" class="btn btn-secondary btn-sm">Clear All</a>
+                <a href="{% url 'skills:skills' %}" class="btn btn-secondary btn-sm">Clear All</a>
             </div>
         </form>
     </div>
@@ -84,16 +126,26 @@
                         {% if skill.description %}
                             <p class="skill-description">{{ skill.description|truncatechars:100 }}</p>
                         {% endif %}
-                        {% if skill.details %}
-                            <div class="card-preview-details">
-                                {% if skill.details.certifications %}
-                                    <span class="detail-chip">{{ skill.details.certifications|length }} Certification{{ skill.details.certifications|length|pluralize }}</span>
-                                {% endif %}
-                                {% if skill.details.projects %}
-                                    <span class="detail-chip">{{ skill.details.projects|length }} Project{{ skill.details.projects|length|pluralize }}</span>
-                                {% endif %}
-                            </div>
-                        {% endif %}
+                        
+                        <!-- Enhanced skill preview with experience connections -->
+                        <div class="card-preview-details">
+                            {% if skill.experience_count > 0 %}
+                                <span class="detail-chip experience-chip">
+                                    {{ skill.experience_count }} Experience{{ skill.experience_count|pluralize }}
+                                </span>
+                            {% endif %}
+                            {% if skill.details.certifications %}
+                                <span class="detail-chip">{{ skill.details.certifications|length }} Certification{{ skill.details.certifications|length|pluralize }}</span>
+                            {% endif %}
+                            {% if skill.details.projects %}
+                                <span class="detail-chip">{{ skill.details.projects|length }} Project{{ skill.details.projects|length|pluralize }}</span>
+                            {% endif %}
+                            {% if skill.get_proficiency_score %}
+                                <span class="detail-chip proficiency-chip">
+                                    Proficiency: {{ skill.get_proficiency_score }}/5
+                                </span>
+                            {% endif %}
+                        </div>
                     </div>
                     <div class="card-actions">
                         <span class="expand-icon">▼</span>
@@ -101,7 +153,43 @@
                 </div>
                 
                 <div class="card-content" id="content-{{ skill.skill_id }}" style="display: none;">
-                    <form method="post" action="{% url 'update_skill' skill.skill_id %}" class="skill-form">
+                    <!-- Experience Connections Section -->
+                    {% if skill.experiences.exists %}
+                        <div class="experience-connections">
+                            <h4>Connected Experiences</h4>
+                            <div class="connected-experiences">
+                                {% for exp_skill in skill.experienceskill_set.all %}
+                                    <div class="connected-experience">
+                                        <div class="exp-main">
+                                            <strong>{{ exp_skill.experience.title }}</strong>
+                                            <span class="exp-context">{{ exp_skill.experience.context_name }}</span>
+                                        </div>
+                                        <div class="exp-meta">
+                                            <span class="prominence-badge prominence-{{ exp_skill.prominence }}">
+                                                {{ exp_skill.get_prominence_display }}
+                                            </span>
+                                            {% if exp_skill.proficiency_demonstrated %}
+                                                <span class="proficiency-badge">{{ exp_skill.proficiency_demonstrated }}</span>
+                                            {% endif %}
+                                        </div>
+                                    </div>
+                                {% endfor %}
+                            </div>
+                        </div>
+                    {% else %}
+                        <div class="no-experiences">
+                            <p>No experiences linked to this skill yet.</p>
+                            <button onclick="linkExistingExperience('{{ skill.skill_id }}')" class="btn btn-sm btn-secondary">
+                                Link Existing Experience
+                            </button>
+                            <a href="{% url 'skills:add_experience_for_skill' skill.skill_id %}" class="btn btn-sm btn-primary">
+                                Add New Experience
+                            </a>
+                        </div>
+                    {% endif %}
+
+                    <!-- Skill Edit Form -->
+                    <form method="post" action="{% url 'skills:update_skill' skill.skill_id %}" class="skill-form">
                         {% csrf_token %}
                         
                         <div class="form-row">
@@ -224,7 +312,7 @@
         {% empty %}
             <div class="empty-state">
                 {% if filter_form.search.value or filter_form.category.value or filter_form.skill_type.value or filter_form.skill_level.value %}
-                    <p>No skills match your current filters. <a href="{% url 'skills' %}">Clear filters</a> to see all skills.</p>
+                    <p>No skills match your current filters. <a href="{% url 'skills:skills' %}">Clear filters</a> to see all skills.</p>
                 {% else %}
                     <p>No skills added yet. Add your first skill below!</p>
                 {% endif %}
@@ -232,11 +320,11 @@
         {% endfor %}
     </div>
 
-    <!-- Add New Skill Form -->
+    <!-- Add New Skill Form (same as before) -->
     <div class="form-section">
         <h2>Add New Skill</h2>
         
-        <form method="post" action="{% url 'add_skill' %}">
+        <form method="post" action="{% url 'skills:add_skill' %}">
             {% csrf_token %}
             
             <div class="form-row">
@@ -345,8 +433,257 @@
     </div>
 </div>
 
+<!-- Experience Linking Modal -->
+<div id="link-experience-modal" class="modal" style="display: none;">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h3>Link Experience to Skill</h3>
+            <button type="button" class="modal-close" onclick="closeLinkModal()">&times;</button>
+        </div>
+        <div class="modal-body">
+            <form id="link-experience-form">
+                <div class="form-group">
+                    <label for="experience-select">Select Experience:</label>
+                    <select id="experience-select" class="form-control" required>
+                        <option value="">Choose an experience...</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label for="prominence-select">How prominent was this skill?</label>
+                    <select id="prominence-select" class="form-control">
+                        <option value="primary">Primary - Central to the experience</option>
+                        <option value="secondary" selected>Secondary - Important but not central</option>
+                        <option value="supporting">Supporting - Used but not prominent</option>
+                    </select>
+                </div>
+            </form>
+        </div>
+        <div class="modal-footer">
+            <button type="button" class="btn btn-secondary" onclick="closeLinkModal()">Cancel</button>
+            <button type="button" class="btn btn-primary" onclick="submitLinkExperience()">Link Experience</button>
+        </div>
+    </div>
+</div>
+
 <style>
-/* Filter Section Styles */
+/* Enhanced skill card styles */
+.analysis-summary-section {
+    margin-bottom: 2rem;
+}
+
+.analysis-summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+}
+
+.summary-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1.5rem;
+}
+
+.summary-header h3 {
+    margin: 0;
+    color: white;
+}
+
+.analysis-date {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.25rem 0.75rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.summary-stat {
+    text-align: center;
+}
+
+.summary-stat .stat-number {
+    display: block;
+    font-size: 2rem;
+    font-weight: bold;
+    color: white;
+}
+
+.summary-stat .stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+}
+
+.summary-actions {
+    display: flex;
+    gap: 1rem;
+}
+
+/* Experience connection styles */
+.experience-connections {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1rem;
+    margin-bottom: 1.5rem;
+}
+
+.experience-connections h4 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1rem;
+}
+
+.connected-experiences {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+}
+
+.connected-experience {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 0.75rem;
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+}
+
+.exp-main strong {
+    color: #333;
+}
+
+.exp-context {
+    margin-left: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.exp-meta {
+    display: flex;
+    gap: 0.5rem;
+    align-items: center;
+}
+
+.prominence-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+}
+
+.prominence-primary {
+    background: #d4edda;
+    color: #155724;
+}
+
+.prominence-secondary {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.prominence-supporting {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.proficiency-badge {
+    background: #e2e3e5;
+    color: #383d41;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+}
+
+.no-experiences {
+    text-align: center;
+    background: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.no-experiences p {
+    margin: 0 0 1rem 0;
+    color: #666;
+}
+
+/* Enhanced detail chips */
+.experience-chip {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+}
+
+.proficiency-chip {
+    background-color: #fff3e0;
+    color: #f57c00;
+}
+
+/* Modal styles */
+.modal {
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.4);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+}
+
+.modal-content {
+    background-color: #fefefe;
+    border-radius: 8px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    width: 90%;
+    max-width: 500px;
+    max-height: 90vh;
+    overflow-y: auto;
+}
+
+.modal-header {
+    padding: 1rem 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.modal-header h3 {
+    margin: 0;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #666;
+}
+
+.modal-body {
+    padding: 1.5rem;
+}
+
+.modal-footer {
+    padding: 1rem 1.5rem;
+    border-top: 1px solid #dee2e6;
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+/* Existing styles from the original template... */
 .filter-section {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -409,7 +746,6 @@
     font-style: italic;
 }
 
-/* Skills Cards Styles */
 .skills-cards {
     margin-bottom: 2rem;
 }
@@ -705,10 +1041,31 @@
     .container {
         padding: 1rem 0.5rem;
     }
+    
+    .summary-stats {
+        grid-template-columns: 1fr 1fr;
+    }
+    
+    .summary-actions {
+        flex-direction: column;
+    }
+    
+    .connected-experience {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .exp-meta {
+        align-self: stretch;
+        justify-content: flex-start;
+    }
 }
 </style>
 
 <script>
+let currentSkillId = null;
+
 function toggleCard(skillId) {
     const card = document.querySelector(`[data-skill-id="${skillId}"]`);
     const content = document.getElementById(`content-${skillId}`);
@@ -723,7 +1080,7 @@ function toggleCard(skillId) {
 }
 
 function deleteSkill(skillId) {
-    if (confirm('Are you sure you want to delete this skill? This action cannot be undone.')) {
+    if (confirm('Are you sure you want to delete this skill? This will also remove all experience connections. This action cannot be undone.')) {
         const form = document.createElement('form');
         form.method = 'POST';
         form.action = `/skills/delete/${skillId}/`;
@@ -740,6 +1097,76 @@ function deleteSkill(skillId) {
     }
 }
 
+function linkExistingExperience(skillId) {
+    currentSkillId = skillId;
+    
+    // Load user experiences
+    fetch('/skills/api/experiences/')
+        .then(response => response.json())
+        .then(data => {
+            const select = document.getElementById('experience-select');
+            select.innerHTML = '<option value="">Choose an experience...</option>';
+            
+            data.experiences.forEach(exp => {
+                const option = document.createElement('option');
+                option.value = exp.experience_id;
+                option.textContent = `${exp.title} - ${exp.context_name}`;
+                select.appendChild(option);
+            });
+            
+            document.getElementById('link-experience-modal').style.display = 'flex';
+        })
+        .catch(error => {
+            console.error('Error loading experiences:', error);
+            alert('Failed to load experiences. Please try again.');
+        });
+}
+
+function closeLinkModal() {
+    document.getElementById('link-experience-modal').style.display = 'none';
+    currentSkillId = null;
+}
+
+function submitLinkExperience() {
+    const experienceId = document.getElementById('experience-select').value;
+    const prominence = document.getElementById('prominence-select').value;
+    
+    if (!experienceId) {
+        alert('Please select an experience.');
+        return;
+    }
+    
+    const formData = new FormData();
+    formData.append('experience_id', experienceId);
+    formData.append('prominence', prominence);
+    formData.append('csrfmiddlewaretoken', document.querySelector('[name=csrfmiddlewaretoken]').value);
+    
+    fetch(`/skills/${currentSkillId}/link-experience/`, {
+        method: 'POST',
+        body: formData
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeLinkModal();
+            location.reload(); // Refresh to show the new connection
+        } else {
+            alert(data.error || 'Failed to link experience.');
+        }
+    })
+    .catch(error => {
+        console.error('Error linking experience:', error);
+        alert('Failed to link experience. Please try again.');
+    });
+}
+
+function runQuickAnalysis() {
+    if (confirm('This will run a new skill analysis. Continue?')) {
+        // Redirect to dashboard to trigger analysis
+        window.location.href = '/jobs/dashboard/';
+    }
+}
+
 // Auto-resize textareas
 document.addEventListener('DOMContentLoaded', function() {
     const textareas = document.querySelectorAll('textarea');
@@ -750,30 +1177,13 @@ document.addEventListener('DOMContentLoaded', function() {
         });
     });
     
-    // Auto-submit filters on change (optional - remove if you prefer manual submit)
-    const filterForm = document.getElementById('filter-form');
-    if (filterForm) {
-        const filterInputs = filterForm.querySelectorAll('input, select');
-        filterInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                // Optional: Auto-submit on filter change
-                // filterForm.submit();
-            });
-        });
-        
-        // Real-time search (optional)
-        const searchInput = document.getElementById('skill-search');
-        if (searchInput) {
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    // Optional: Auto-submit on search after 500ms delay
-                    // filterForm.submit();
-                }, 500);
-            });
+    // Close modal when clicking outside
+    const modal = document.getElementById('link-experience-modal');
+    window.addEventListener('click', function(event) {
+        if (event.target === modal) {
+            closeLinkModal();
         }
-    }
+    });
 });
 
 // Category input enhancement

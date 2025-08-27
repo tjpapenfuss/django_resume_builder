@@ -260,13 +260,13 @@
 
     <!-- Actions -->
     <div class="actions">
-        <a href="{% url 'job_list' %}" class="btn btn-secondary">← Back to Jobs</a>
+        <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary">← Back to Jobs</a>
         {% if not job.ai_analysis %}
             <button onclick="analyzeWithAI('{{ job.pk }}')" class="btn btn-primary">
                 ✨ Analyze with AI
             </button>
         {% endif %}
-        <a href="{% url 'job_delete' job.pk %}" class="btn btn-danger">Remove Job</a>
+        <a href="{% url 'jobs:job_delete' job.pk %}" class="btn btn-danger">Remove Job</a>
     </div>
 </div>
 

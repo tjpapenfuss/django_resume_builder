@@ -54,7 +54,7 @@
                 </div>
                 
                 <div class="card-content" id="content-{{ education.education_id }}" style="display: none;">
-                    <form method="post" action="{% url 'update_education' education.education_id %}" class="education-form">
+                    <form method="post" action="{% url 'education:update_education' education.education_id %}" class="education-form">
                         {% csrf_token %}
                         
                         <div class="form-row">
@@ -138,27 +138,24 @@
                         <!-- Additional Details Section -->
                         <div class="details-section">
                             <h4>Additional Details</h4>
-                            
                             <div class="form-group">
                                 <label for="certifications_{{ education.education_id }}">Certifications</label>
                                 <textarea id="certifications_{{ education.education_id }}" 
                                           name="certifications" 
                                           class="form-control" 
                                           rows="3" 
-                                          placeholder="List any certifications earned (one per line)">{% if education.details.certifications %}{{ education.details.certifications|join:"\n" }}{% endif %}</textarea>
+                                          placeholder="List any certifications earned (one per line)">{% if education.details.certifications %}{{ education.details.certifications|join:"\n"|linebreaksbr }}{% endif %}</textarea>
                                 <small class="help-text">List certifications earned during or related to this education (one per line)</small>
                             </div>
-
                             <div class="form-group">
                                 <label for="courses_{{ education.education_id }}">Relevant Courses</label>
                                 <textarea id="courses_{{ education.education_id }}" 
                                           name="courses" 
                                           class="form-control" 
                                           rows="3" 
-                                          placeholder="List relevant courses or coursework (one per line)">{% if education.details.courses %}{{ education.details.courses|join:"\n" }}{% endif %}</textarea>
+                                          placeholder="List relevant courses or coursework (one per line)">{% if education.details.courses %}{{ education.details.courses|join:"\n"|linebreaksbr }}{% endif %}</textarea>
                                 <small class="help-text">List relevant or notable courses (one per line)</small>
                             </div>
-
                             <div class="form-group">
                                 <label for="activities_{{ education.education_id }}">Activities & Honors</label>
                                 <textarea id="activities_{{ education.education_id }}" 
@@ -198,7 +195,7 @@
     <div class="form-section">
         <h2>Add Education</h2>
         
-        <form method="post" action="{% url 'add_education' %}">
+        <form method="post" action="{% url 'education:add_education' %}">
             {% csrf_token %}
             
             <div class="form-row">

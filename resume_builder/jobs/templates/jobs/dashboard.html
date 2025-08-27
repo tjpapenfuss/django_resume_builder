@@ -56,7 +56,7 @@
     <div class="form-section">
         <h2>Quick Actions</h2>
         <div class="quick-actions">
-            <a href="{% url 'add_job_from_url' %}" class="action-button primary">
+            <a href="{% url 'jobs:add_job_from_url' %}" class="action-button primary">
                 <div class="action-icon">➕</div>
                 <div class="action-content">
                     <h4>Add New Job</h4>
@@ -64,7 +64,7 @@
                 </div>
             </a>
             
-            <a href="{% url 'job_list' %}" class="action-button secondary">
+            <a href="{% url 'jobs:job_list' %}" class="action-button secondary">
                 <div class="action-icon">📋</div>
                 <div class="action-content">
                     <h4>View All Jobs</h4>
@@ -72,7 +72,7 @@
                 </div>
             </a>
             
-            <a href="{% url 'experience' %}" class="action-button secondary">
+            <a href="{% url 'experience:experience' %}" class="action-button secondary">
                 <div class="action-icon">💼</div>
                 <div class="action-content">
                     <h4>Manage Experiences</h4>
@@ -94,7 +94,7 @@
                         <div class="job-main-info">
                             <h3>
                                 {% if application.job_posting.pk %}
-                                    <a href="{% url 'job_detail' application.job_posting.pk %}">
+                                    <a href="{% url 'jobs:job_detail' application.job_posting.pk %}">
                                         {{ application.job_posting.job_title }}
                                     </a>
                                 {% else %}
@@ -116,7 +116,7 @@
                         
                         <div class="job-actions">
                             {% if application.job_posting.pk %}
-                                <a href="{% url 'job_detail' application.job_posting.pk %}" class="btn btn-sm btn-primary">
+                                <a href="{% url 'jobs:job_detail' application.job_posting.pk %}" class="btn btn-sm btn-primary">
                                     View Details
                                 </a>
                             {% else %}
@@ -130,7 +130,7 @@
             </div>
             
             <div class="section-footer">
-                <a href="{% url 'job_list' %}" class="btn btn-secondary">View All Jobs →</a>
+                <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary">View All Jobs →</a>
             </div>
         </div>
     {% else %}
@@ -138,7 +138,7 @@
             <div class="empty-state">
                 <h3>No Jobs Saved Yet</h3>
                 <p>Start building your job pipeline by adding your first job opportunity!</p>
-                <a href="{% url 'job_add' %}" class="btn btn-primary">Add Your First Job</a>
+                <a href="{% url 'jobs:job_add' %}" class="btn btn-primary">Add Your First Job</a>
             </div>
         </div>
     {% endif %}
@@ -174,6 +174,117 @@
                 </div>
                 <div class="stage-bar">
                     <div class="stage-progress" data-width="{% if stats.applied > 0 %}{% widthratio stats.interviewing stats.applied 100 %}{% else %}0{% endif %}"></div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Skill Gap Analysis -->
+    <div class="form-section">
+        <h2>Skill Analysis</h2>
+        <input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+        {% if can_analyze_skills %}
+            <!-- Show recent analysis if exists -->
+            {% if latest_analysis %}
+                <div class="recent-analysis">
+                    <div class="analysis-summary">
+                        <h3>Latest Analysis <span class="analysis-date">({{ latest_analysis.staleness_indicator }})</span></h3>
+                        <div class="analysis-stats">
+                            <div class="stat-item">
+                                <span class="stat-number">{{ latest_analysis.total_skill_gaps }}</span>
+                                <span class="stat-label">Skill Gaps</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ latest_analysis.average_job_match_score|floatformat:0 }}%</span>
+                                <span class="stat-label">Avg Match</span>
+                            </div>
+                            <div class="stat-item">
+                                <span class="stat-number">{{ latest_analysis.total_skills_found }}</span>
+                                <span class="stat-label">Skills Found</span>
+                            </div>
+                        </div>
+                        
+                        {% if latest_analysis.needs_refresh %}
+                            <div class="refresh-notice">
+                                <p>📊 Your profile has changed since this analysis. Consider refreshing for updated results.</p>
+                            </div>
+                        {% endif %}
+                    </div>
+                    
+                    <div class="analysis-actions">
+                        <a href="{% url 'skills:skill_analysis_detail' latest_analysis.analysis_id %}" class="btn btn-primary">
+                            View Full Analysis
+                        </a>
+                        <button id="run-skill-analysis" class="btn btn-secondary">
+                            {% if latest_analysis.needs_refresh %}Re-analyze Skills{% else %}Refresh Analysis{% endif %}
+                        </button>
+                    </div>
+                </div>
+            {% else %}
+                <!-- First time analysis -->
+                <div class="analysis-actions" id="analysis-actions">
+                    <div class="analysis-intro">
+                        <h3>Discover Your Skill Gaps</h3>
+                        <p>Analyze your experiences against your saved jobs to identify skill gaps and improvement opportunities.</p>
+                        <div class="analysis-preview">
+                            <div class="preview-stat">
+                                <span class="preview-number">{{ experience_count }}</span>
+                                <span class="preview-label">Experiences</span>
+                            </div>
+                            <span class="preview-arrow">→</span>
+                            <div class="preview-stat">
+                                <span class="preview-number">{{ job_count }}</span>
+                                <span class="preview-label">Saved Jobs</span>
+                            </div>
+                            <span class="preview-arrow">→</span>
+                            <div class="preview-stat">
+                                <span class="preview-number">?</span>
+                                <span class="preview-label">Skill Gaps</span>
+                            </div>
+                        </div>
+                    </div>
+                    <button id="run-skill-analysis" class="btn btn-primary btn-lg">
+                        Analyze My Skills vs Jobs
+                    </button>
+                </div>
+            {% endif %}
+        {% else %}
+            <!-- Insufficient data -->
+            <div class="insufficient-data">
+                <h3>Skill Analysis Not Available</h3>
+                <p>You need at least one experience and one saved job to run skill analysis.</p>
+                <div class="data-status">
+                    <div class="status-item">
+                        <span class="status-number {% if experience_count > 0 %}status-good{% else %}status-missing{% endif %}">{{ experience_count }}</span>
+                        <span class="status-label">Experience{{ experience_count|pluralize }}</span>
+                    </div>
+                    <div class="status-item">
+                        <span class="status-number {% if job_count > 0 %}status-good{% else %}status-missing{% endif %}">{{ job_count }}</span>
+                        <span class="status-label">Saved Job{{ job_count|pluralize }}</span>
+                    </div>
+                </div>
+                <div class="missing-data-actions">
+                    {% if experience_count == 0 %}
+                        <a href="{% url 'experience:experience' %}" class="btn btn-primary">Add Experience</a>
+                    {% endif %}
+                    {% if job_count == 0 %}
+                        <a href="{% url 'jobs:add_job_from_url' %}" class="btn btn-primary">Save Job</a>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+
+        <!-- Loading State -->
+        <div class="analysis-loading" id="analysis-loading" style="display: none;">
+            <div class="loading-content">
+                <div class="loading-spinner"></div>
+                <h3>Analyzing Your Skills...</h3>
+                <p>This may take a moment while we process your experiences and job requirements.</p>
+                <div class="loading-progress">
+                    <div class="progress-step active">Extracting skills from experiences</div>
+                    <div class="progress-step">Analyzing job requirements</div>
+                    <div class="progress-step">Identifying skill gaps</div>
+                    <div class="progress-step">Calculating job matches</div>
                 </div>
             </div>
         </div>
@@ -523,6 +634,250 @@
     font-size: 1.1rem;
 }
 
+/* Recent Analysis Styles */
+.recent-analysis {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.analysis-summary h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.analysis-date {
+    font-size: 0.8rem;
+    color: #666;
+    font-weight: normal;
+}
+
+.analysis-stats {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1rem;
+}
+
+.stat-item {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.refresh-notice {
+    background: #fff3cd;
+    border: 1px solid #ffeaa7;
+    border-radius: 4px;
+    padding: 0.75rem;
+    margin: 1rem 0;
+}
+
+.refresh-notice p {
+    margin: 0;
+    color: #856404;
+    font-size: 0.9rem;
+}
+
+.analysis-actions {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+/* First Time Analysis Styles */
+.analysis-intro {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.analysis-intro h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.analysis-intro p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.analysis-preview {
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    gap: 1rem;
+    margin-bottom: 2rem;
+}
+
+.preview-stat {
+    text-align: center;
+    background: white;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    min-width: 80px;
+}
+
+.preview-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.preview-label {
+    font-size: 0.8rem;
+    color: #666;
+}
+
+.preview-arrow {
+    font-size: 1.2rem;
+    color: #666;
+}
+
+/* Insufficient Data Styles */
+.insufficient-data {
+    text-align: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 2rem;
+}
+
+.insufficient-data h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.insufficient-data p {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+}
+
+.data-status {
+    display: flex;
+    justify-content: center;
+    gap: 2rem;
+    margin-bottom: 2rem;
+}
+
+.status-item {
+    text-align: center;
+}
+
+.status-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    padding: 0.5rem;
+    border-radius: 50%;
+    width: 50px;
+    height: 50px;
+    line-height: 40px;
+    margin: 0 auto 0.5rem;
+}
+
+.status-good {
+    background: #d4edda;
+    color: #155724;
+}
+
+.status-missing {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.status-label {
+    font-size: 0.85rem;
+    color: #666;
+}
+
+.missing-data-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Loading Styles */
+.analysis-loading {
+    text-align: center;
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 8px;
+    padding: 3rem 2rem;
+}
+
+.loading-content h3 {
+    margin: 1rem 0;
+    color: #333;
+}
+
+.loading-content p {
+    margin: 0 0 2rem 0;
+    color: #666;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-bottom: 1rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+.loading-progress {
+    display: flex;
+    flex-direction: column;
+    gap: 0.5rem;
+    max-width: 300px;
+    margin: 0 auto;
+}
+
+.progress-step {
+    padding: 0.5rem 1rem;
+    background: #e9ecef;
+    border-radius: 4px;
+    color: #666;
+    font-size: 0.9rem;
+    opacity: 0.5;
+    transition: all 0.3s ease;
+}
+
+.progress-step.active {
+    background: #007bff;
+    color: white;
+    opacity: 1;
+}
+
+/* Button Styles */
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+}
+
 /* Mobile Responsive */
 @media (max-width: 768px) {
     .stats-grid {
@@ -587,6 +942,39 @@
         gap: 0.25rem;
     }
 }
+
+/* Responsive */
+@media (max-width: 768px) {
+    .analysis-stats {
+        flex-direction: column;
+        gap: 1rem;
+        text-align: center;
+    }
+    
+    .analysis-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .analysis-preview {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+    
+    .preview-arrow {
+        transform: rotate(90deg);
+    }
+    
+    .data-status {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .missing-data-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+}
 </style>
 
 <script>
@@ -614,4 +1002,76 @@ document.addEventListener('DOMContentLoaded', function() {
     });
 });
 </script>
+
+<!-- JavaScript for Skill Analysis -->
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const analysisButton = document.getElementById('run-skill-analysis');
+    if (analysisButton) {
+        analysisButton.addEventListener('click', runSkillAnalysis);
+    }
+});
+
+function runSkillAnalysis() {
+    const actionsDiv = document.getElementById('analysis-actions') || document.querySelector('.recent-analysis');
+    const loadingDiv = document.getElementById('analysis-loading');
+    
+    // Show loading state
+    if (actionsDiv) actionsDiv.style.display = 'none';
+    loadingDiv.style.display = 'block';
+    
+    // Animate progress steps
+    const progressSteps = document.querySelectorAll('.progress-step');
+    let currentStep = 0;
+    
+    const progressInterval = setInterval(() => {
+        if (currentStep > 0) {
+            progressSteps[currentStep - 1].classList.remove('active');
+        }
+        if (currentStep < progressSteps.length) {
+            progressSteps[currentStep].classList.add('active');
+            currentStep++;
+        } else {
+            clearInterval(progressInterval);
+        }
+    }, 5000); // 5 seconds 
+
+    // Make AJAX request
+    console.log('URL being called:', '{% url "skills:run_skill_analysis" %}');
+
+    fetch('{% url "skills:run_skill_analysis" %}', {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value,
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        clearInterval(progressInterval);
+        
+        if (data.success) {
+            // Redirect to the detailed analysis page
+            window.location.href = `/skills/analysis/${data.analysis_id}/`;
+        } else {
+            loadingDiv.style.display = 'none';
+            if (actionsDiv) actionsDiv.style.display = 'block';
+            
+            if (data.error === 'insufficient_data') {
+                alert(`Cannot run analysis: ${data.message}`);
+            } else {
+                alert('Analysis failed: ' + data.message);
+            }
+        }
+    })
+    .catch(error => {
+        clearInterval(progressInterval);
+        console.error('Error:', error);
+        loadingDiv.style.display = 'none';
+        if (actionsDiv) actionsDiv.style.display = 'block';
+        alert('Network error occurred. Please try again.');
+    });
+}
+</script>
+
 {% endblock %}

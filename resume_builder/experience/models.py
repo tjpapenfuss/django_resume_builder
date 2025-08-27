@@ -54,6 +54,14 @@ class Experience(models.Model):
     created_date = models.DateTimeField(auto_now_add=True)  # Set once when created
     modified_date = models.DateTimeField(auto_now=True)     # Updates every save
     
+    skills = models.ManyToManyField(
+        'skills.Skill',
+        through='skills.ExperienceSkill',
+        related_name='experiences',
+        blank=True,
+        help_text="Skills demonstrated in this experience"
+    )
+
     class Meta:
         # Default ordering: newest first by start date, then creation date
         ordering = ['-date_started', '-created_date']
@@ -113,6 +121,37 @@ class Experience(models.Model):
         """
         return self.date_started and not self.date_finished
     
+    # ... rest of existing model ...
+
+    def add_skill(self, skill, prominence='secondary', proficiency=None, usage_notes='', method='manual'):
+        """Helper method to add a skill to this experience"""
+        from skills.models import ExperienceSkill
+        
+        experience_skill, created = ExperienceSkill.objects.get_or_create(
+            experience=self,
+            skill=skill,
+            defaults={
+                'prominence': prominence,
+                'proficiency_demonstrated': proficiency,
+                'usage_notes': usage_notes,
+                'extraction_method': method
+            }
+        )
+        return experience_skill, created
+
+    def get_primary_skills(self):
+        # Get skills marked as primary for this experience
+        return self.skills.filter(
+            experienceskill__prominence='primary'
+        ).order_by('experienceskill__created_date')
+
+    def get_skill_prominences(self):
+        # Get all skills with their prominence levels
+        from skills.models import ExperienceSkill
+        return ExperienceSkill.objects.filter(
+            experience=self
+        ).select_related('skill').order_by('prominence', 'skill__title')
+
     def get_tags_for_job_type(self, job_type_tags):
         """
         Returns the number of overlapping tags between this experience
@@ -154,3 +193,4 @@ class Experience(models.Model):
             return experiences[:limit]
         
         return experiences
+

@@ -57,7 +57,7 @@
                 </div>
                 
                 <div class="card-content" id="content-{{ employment.employment_id }}" style="display: none;">
-                    <form method="post" action="{% url 'update_employment' employment.employment_id %}" class="employment-form">
+                    <form method="post" action="{% url 'employment:update_employment' employment.employment_id %}" class="employment-form">
                         {% csrf_token %}
                         
                         <div class="form-row">
@@ -222,7 +222,7 @@
     <div class="form-section">
         <h2>Add Employment</h2>
         
-        <form method="post" action="{% url 'add_employment' %}">
+        <form method="post" action="{% url 'employment:add_employment' %}">
             {% csrf_token %}
             
             <div class="form-row">

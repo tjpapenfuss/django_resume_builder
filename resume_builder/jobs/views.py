@@ -201,8 +201,28 @@ def dashboard(request):
         'interviewing': applications.filter(status__in=['phone_screen', 'interview']).count(),
         'recent_jobs': applications.order_by('-created_at')[:5]
     }
+    # Check if user has data needed for skill analysis
+    from experience.models import Experience  # Use your correct app name
+    from skills.models import SkillAnalysis
     
-    return render(request, 'jobs/dashboard.html', {'stats': stats})
+    experience_count = Experience.objects.filter(user=request.user).count()
+    job_count = applications.count()
+    can_analyze = experience_count > 0 and job_count > 0
+    
+    # Get latest analysis if exists
+    latest_analysis = SkillAnalysis.objects.filter(user=request.user).first()
+    
+    context = {
+        'stats': stats,
+        'can_analyze_skills': can_analyze,  # This was missing
+        'experience_count': experience_count,  # This was missing
+        'job_count': job_count,  # This was missing
+        'latest_analysis': latest_analysis,  # This was missing
+    }
+    
+    return render(request, 'jobs/dashboard.html', context)
+    
+    # return render(request, 'jobs/dashboard.html', {'stats': stats})
 
 # Usage in your views:
 def job_detail(request, pk):

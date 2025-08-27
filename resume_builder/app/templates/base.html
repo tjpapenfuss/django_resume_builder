@@ -656,16 +656,16 @@
             <!-- Resume Building -->
             <div class="nav-section">
                 <div class="nav-section-title">Resume Building</div>
-                <a href="{% url 'employment' %}" class="nav-item {% if request.resolver_match.url_name == 'add_employment' %}active{% endif %}">
+                <a href="{% url 'employment:employment' %}" class="nav-item {% if request.resolver_match.url_name == 'add_employment' %}active{% endif %}">
                     <span class="nav-item-icon">💼</span>Add Employment
                 </a>
-                <a href="{% url 'education' %}" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
+                <a href="{% url 'education:education' %}" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
                     <span class="nav-item-icon">🎓</span>Add Education
                 </a>
-                <a href="{% url 'experience' %}" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
+                <a href="{% url 'experience:experience' %}" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
                     <span class="nav-item-icon">🎓</span>Add Experience
                 </a>
-                <a href="{% url 'skills' %}" class="nav-item {% if request.resolver_match.url_name == 'add_skill' %}active{% endif %}">
+                <a href="{% url 'skills:skills' %}" class="nav-item {% if request.resolver_match.url_name == 'add_skill' %}active{% endif %}">
                     <span class="nav-item-icon">🛠️</span>Add Skills
                 </a>
                 <!-- Taking out achievements / certifications for now. Will add back later.  
@@ -677,10 +677,10 @@
             <!-- Job Section Building -->
             <div class="nav-section">
                 <div class="nav-section-title">Job Section</div>
-                <a href="{% url 'job_list' %}" class="nav-item {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
+                <a href="{% url 'jobs:job_list' %}" class="nav-item {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
                     <span class="nav-item-icon">💼</span>Job List
                 </a>
-                <a href="{% url 'job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
+                <a href="{% url 'jobs:job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
                     <span class="nav-item-icon">🎓</span>Job Dashboard
                 </a>
             </div>
