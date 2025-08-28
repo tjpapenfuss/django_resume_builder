@@ -100,7 +100,7 @@
         <div class="actions">
             <div class="primary-actions">
                 <button type="submit" name="action" value="accept_all" class="btn btn-primary btn-lg" id="accept-all-btn">
-                    Accept All Skills ({{ total_skills }})
+                    Accept All Skills (<span id="total-skills-count" data-total-skills="{{ total_skills }}">{{ total_skills }}</span>)
                 </button>
                 <button type="submit" name="action" value="accept_selected" class="btn btn-success btn-lg" id="accept-selected-btn">
                     Accept Selected (<span id="selected-count">0</span>)
@@ -637,27 +637,28 @@ document.addEventListener('DOMContentLoaded', function() {
     
     function updateSelectedCount() {
         const selectedCount = document.querySelectorAll('input[name="selected_skills"]:checked').length;
-        const additionalSkills = document.querySelector('textarea[name="additional_skills"]').value.trim();
-        const additionalSkillsCount = additionalSkills ? additionalSkills.split('\n').filter(s => s.trim()).length : 0;
+        const additionalSkillsInput = document.querySelector('textarea[name="additional_skills"]');
+        const additionalSkills = additionalSkillsInput ? additionalSkillsInput.value.trim() : "";
+        const additionalSkillsCount = additionalSkills ? additionalSkills.split(/\n|,/).filter(s => s.trim()).length : 0;
         const totalCount = selectedCount + additionalSkillsCount;
-        
+
         selectedCountSpan.textContent = totalCount;
-        
+
         // Update button states
-        if (totalCount === 0) {
-            acceptSelectedBtn.disabled = true;
-            acceptSelectedBtn.style.opacity = '0.5';
-        } else {
-            acceptSelectedBtn.disabled = false;
-            acceptSelectedBtn.style.opacity = '1';
-        }
+        acceptSelectedBtn.disabled = totalCount === 0;
+        acceptSelectedBtn.style.opacity = totalCount === 0 ? '0.5' : '1';
+
+        // Update the total count for Accept All button
+        totalSkillsEl.textContent = baseSkillsCount + additionalSkillsCount;
     }
 
-    // Add event listener to additional skills textarea
-    document.querySelector('textarea[name="additional_skills"]').addEventListener('input', function() {
-        updateSelectedCount();
-        updatePreview();
-    });
+    const additionalSkillsInput = document.querySelector('textarea[name="additional_skills"]');
+    if (additionalSkillsInput) {
+        additionalSkillsInput.addEventListener('input', function() {
+            updateSelectedCount();
+            updatePreview();
+        });
+    }
     
     function updatePreview() {
         const selectedSkills = Array.from(document.querySelectorAll('input[name="selected_skills"]:checked'))

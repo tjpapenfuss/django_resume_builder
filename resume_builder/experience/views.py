@@ -117,6 +117,7 @@ def analyze_experience_skills(request, experience_id):
         if action == 'accept_all':
             # Handle additional skills from textarea
             additional_skills_text = request.POST.get('additional_skills', '').strip()
+            ai_analysis = experience.details.get('ai_analysis', {})
             if additional_skills_text:
                 additional_skills = [skill.strip() for skill in additional_skills_text.split('\n') if skill.strip()]
                 # Add them to the AI analysis as domain expertise
