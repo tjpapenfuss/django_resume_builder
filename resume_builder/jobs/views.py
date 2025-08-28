@@ -1,4 +1,3 @@
-
 from django.shortcuts import render, redirect, get_object_or_404
 from django.contrib.auth.decorators import login_required
 from django.contrib import messages
@@ -8,9 +7,9 @@ from django.db.models import Q
 from .forms import JobURLForm
 from .models import JobPosting, JobApplication
 from .services.job_scraper import JobDescriptionScraper
-import json
 from .services.ai_analyzer import analyze_job_with_ai
 from django.views.decorators.http import require_http_methods
+import json
 
 @login_required
 def add_job_from_url(request):
@@ -45,7 +44,7 @@ def add_job_from_url(request):
                     else:
                         messages.info(request, f'You already have this job saved: {existing_job.job_title}')
                     
-                    return redirect('job_detail', pk=existing_job.pk)
+                    return redirect('jobs:job_detail', pk=existing_job.pk)
                 
                 # Create new job
                 scraper = JobDescriptionScraper()
@@ -70,7 +69,7 @@ def add_job_from_url(request):
                     status='saved'
                 )
                 
-                return redirect('job_detail', pk=job_posting.pk)
+                return redirect('jobs:job_detail', pk=job_posting.pk)
                 
             except Exception as e:
                 messages.error(request, f'Failed to process job: {str(e)}')
@@ -114,7 +113,7 @@ def job_list(request):
 
 @login_required
 def job_detail(request, pk):
-    """Detailed view of a specific job posting"""
+    """Detailed view of a specific job posting with skill matching analysis"""
     job = get_object_or_404(JobPosting, pk=pk)
     
     # Get or create application record for this user
@@ -129,32 +128,48 @@ def job_detail(request, pk):
     scraped_content = json_data.get('scraped_content', {})
     parsed_requirements = json_data.get('parsed_requirements', {})
     matching_opportunities = json_data.get('matching_opportunities', {})
+    
+    # Initialize skill_match_analysis as None
+    skill_match_analysis = None
+    
+    # Add skill matching analysis if user has skills
+    try:
+        from skills.services.job_skill_matcher import JobSkillMatcher
+        matcher = JobSkillMatcher(request.user, job)
+        skill_match_analysis = matcher.analyze_match()
+    except ImportError:
+        # Handle case where service doesn't exist yet
+        messages.warning(request, 'Skill matching service not available')
+    except Exception as e:
+        # Handle other errors gracefully
+        messages.error(request, f'Error analyzing skills: {str(e)}')
+    
     context = {
         'job': job,
         'application': application,
-        'parsed_requirements': job.raw_json.get('parsed_requirements', {}),
-        'scraped_content': job.raw_json.get('scraped_content', {}),
-        # AI analysis is accessed via job.ai_analysis property
+        'parsed_requirements': parsed_requirements,
+        'scraped_content': scraped_content,
         'matching_opportunities': matching_opportunities,
+        'skill_match_analysis': skill_match_analysis,  # Add the skill analysis
     }
     
     return render(request, 'jobs/detail.html', context)
 
 @login_required
+@require_http_methods(["POST"])
 def update_application_status(request, pk):
     """Update application status via AJAX"""
-    if request.method == 'POST':
-        application = get_object_or_404(JobApplication, pk=pk, user=request.user)
-        new_status = request.POST.get('status')
+    application = get_object_or_404(JobApplication, pk=pk, user=request.user)
+    new_status = request.POST.get('status')
+    
+    if new_status in dict(JobApplication.STATUS_CHOICES):
+        application.status = new_status
+        application.save()
         
-        if new_status in dict(JobApplication.STATUS_CHOICES):
-            application.status = new_status
-            application.save()
-            
-            return JsonResponse({
-                'success': True,
-                'new_status': application.get_status_display()
-            })
+        return JsonResponse({
+            'success': True,
+            'new_status': application.get_status_display()
+        })
     
     return JsonResponse({'success': False})
 
@@ -167,7 +182,7 @@ def job_delete(request, pk):
         job_title = application.job_posting.job_title
         application.delete()
         messages.success(request, f'Removed "{job_title}" from your saved jobs.')
-        return redirect('job_list')
+        return redirect('jobs:job_list')
     
     return render(request, 'jobs/confirm_delete.html', {'application': application})
 
@@ -187,67 +202,42 @@ def job_skills_api(request, pk):
     return JsonResponse(data)
 
 @login_required
-def dashboard(request):
-    """Dashboard showing job application stats"""
-    # Filter out applications with missing jobs
-    applications = JobApplication.objects.filter(
-        user=request.user,
-        job_posting__isnull=False  
-    ).select_related('job_posting')  
-    
-    stats = {
-        'total_saved': applications.filter(status='saved').count(),  
-        'applied': applications.filter(status='applied').count(),
-        'interviewing': applications.filter(status__in=['phone_screen', 'interview']).count(),
-        'recent_jobs': applications.order_by('-created_at')[:5]
-    }
-    # Check if user has data needed for skill analysis
-    from experience.models import Experience  # Use your correct app name
-    from skills.models import SkillAnalysis
-    
-    experience_count = Experience.objects.filter(user=request.user).count()
-    job_count = applications.count()
-    can_analyze = experience_count > 0 and job_count > 0
-    
-    # Get latest analysis if exists
-    latest_analysis = SkillAnalysis.objects.filter(user=request.user).first()
-    
-    context = {
-        'stats': stats,
-        'can_analyze_skills': can_analyze,  # This was missing
-        'experience_count': experience_count,  # This was missing
-        'job_count': job_count,  # This was missing
-        'latest_analysis': latest_analysis,  # This was missing
-    }
-    
-    return render(request, 'jobs/dashboard.html', context)
-    
-    # return render(request, 'jobs/dashboard.html', {'stats': stats})
-
-# Usage in your views:
-def job_detail(request, pk):
+def job_skill_gap_simple(request, pk):
     job = get_object_or_404(JobPosting, pk=pk)
-    application = get_object_or_404(JobApplication, user=request.user, job_posting=job)
-
-    # Get or create AI analysis
-    ai_analysis = analyze_job_with_ai(job)
+    
+    try:
+        from skills.services.job_skill_matcher import JobSkillMatcher
+        matcher = JobSkillMatcher(request.user, job)
+        skill_match_analysis = matcher.analyze_match()
+    except Exception as e:
+        skill_match_analysis = None
+        messages.error(request, f'Error analyzing skills: {str(e)}')
     
     context = {
         'job': job,
-        'application': application,
-        'parsed_requirements': job.raw_json.get('parsed_requirements', {}),
-        'ai_analysis': ai_analysis,  # Add this to your context
-        'scraped_content': job.raw_json.get('scraped_content', {}),
+        'skill_match_analysis': skill_match_analysis,
     }
     
-    return render(request, 'jobs/detail.html', context)
+    return render(request, 'jobs/skill_gap_simple.html', context)
 
-@require_http_methods(["POST"])
 @login_required
+@require_http_methods(["POST"])
 def analyze_job_api(request, pk):
     """API endpoint to trigger AI analysis for a job"""
     try:
-        job = get_object_or_404(JobPosting, pk=pk, added_by=request.user)
+        job = get_object_or_404(JobPosting, pk=pk)
+        
+        # Check if user has access to this job
+        application = JobApplication.objects.filter(
+            user=request.user, 
+            job_posting=job
+        ).first()
+        
+        if not application:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have access to this job'
+            }, status=403)
         
         # Call your AI analysis function
         ai_analysis = analyze_job_with_ai(job)
@@ -268,3 +258,47 @@ def analyze_job_api(request, pk):
             'success': False,
             'message': f'Error: {str(e)}'
         }, status=500)
+
+@login_required
+def dashboard(request):
+    """Dashboard showing job application stats and skill analysis options"""
+    # Filter out applications with missing jobs
+    applications = JobApplication.objects.filter(
+        user=request.user,
+        job_posting__isnull=False  
+    ).select_related('job_posting')  
+    
+    stats = {
+        'total_saved': applications.filter(status='saved').count(),  
+        'applied': applications.filter(status='applied').count(),
+        'interviewing': applications.filter(status__in=['phone_screen', 'interview']).count(),
+        'recent_jobs': applications.order_by('-created_at')[:5]
+    }
+    
+    # Check if user has data needed for skill analysis
+    try:
+        from experience.models import Experience
+        from skills.models import SkillAnalysis
+        
+        experience_count = Experience.objects.filter(user=request.user).count()
+        job_count = applications.count()
+        can_analyze = experience_count > 0 and job_count > 0
+        
+        # Get latest analysis if exists
+        latest_analysis = SkillAnalysis.objects.filter(user=request.user).first()
+    except ImportError:
+        # Handle case where models don't exist yet
+        experience_count = 0
+        job_count = applications.count()
+        can_analyze = False
+        latest_analysis = None
+    
+    context = {
+        'stats': stats,
+        'can_analyze_skills': can_analyze,
+        'experience_count': experience_count,
+        'job_count': job_count,
+        'latest_analysis': latest_analysis,
+    }
+    
+    return render(request, 'jobs/dashboard.html', context)

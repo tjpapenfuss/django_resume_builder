@@ -1,15 +1,12 @@
 {% extends 'base.html' %}
 
-{% block title %}{{ job.job_title }} at {{ job.company_name }} - Resume Builder{% endblock %}
+{% block title %}Skill Gap Analysis - {{ job.job_title }} at {{ job.company_name }}{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>{{ job.job_title }}</h1>
-        <p>{{ job.company_name }}
-            {% if job.location %} • {{ job.location }}{% endif %}
-            {% if job.remote_ok %} • <span style="color: #28a745;">Remote OK</span>{% endif %}
-        </p>
+        <h1>Skill Gap Analysis</h1>
+        <h2>{{ job.job_title }} at {{ job.company_name }}</h2>
     </div>
 
     {% if messages %}
@@ -20,379 +17,139 @@
         {% endfor %}
     {% endif %}
 
-    <!-- Application Status Section -->
-    <div class="form-section">
-        <h2>Application Status</h2>
-        <form class="status-update-form" data-application-id="{{ application.pk }}">
-            {% csrf_token %}
-            <div class="form-row">
-                <div class="form-group">
-                    <label for="status">Current Status</label>
-                    <select name="status" id="status" class="form-control">
-                        {% for value, label in application.STATUS_CHOICES %}
-                            <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>
-                                {{ label }}
-                            </option>
-                        {% endfor %}
-                    </select>
+    {% if skill_match_analysis %}
+        <!-- Analysis Summary Bar -->
+        <div class="analysis-summary">
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.overall_match_score }}%</div>
+                    <div class="stat-label">Overall Match</div>
                 </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <button type="submit" class="btn btn-primary" style="margin-top: 0;">Update Status</button>
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.total_matched_skills }}</div>
+                    <div class="stat-label">Skills Matched</div>
                 </div>
-                <div class="form-group">
-                    <label>&nbsp;</label>
-                    <a href="{{ job.url }}" target="_blank" class="btn btn-secondary" style="margin-top: 0;">View Original Posting</a>
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.top_skill_gaps|length }}</div>
+                    <div class="stat-label">Skills to Add</div>
                 </div>
-            </div>
-            
-            <div class="form-row">
-                <div class="form-group">
-                    <label>Added to Jobs</label>
-                    <p class="form-text">{{ application.created_at|date:"M d, Y at g:i A" }}</p>
-                </div>
-                <div class="form-group">
-                    <label>Last Scraped</label>
-                    <p class="form-text">{{ job.scraped_at|date:"M d, Y at g:i A" }}</p>
-                </div>
-                <div class="form-group">
-                    {% if job.ai_analysis %}
-                        <label>AI Analyzed</label>
-                        <p class="form-text ai-analyzed">{{ job.raw_json.ai_analyzed_at|date:"M d, Y at g:i A" }} 
-                            <span class="ai-badge">✨ AI Enhanced</span>
-                        </p>
-                    {% else %}
-                        <label>Analysis Status</label>
-                        <p class="form-text">Basic parsing only</p>
-                    {% endif %}
-                </div>
-            </div>
-        </form>
-    </div>
-
-    <!-- Job Requirements Section -->
-    <div class="form-section">
-        <h2>Job Requirements & Skills</h2>
-        
-        {% comment %}
-        Use AI analysis if available, otherwise fall back to parsed_requirements
-        {% endcomment %}
-        {% if job.ai_analysis.required_skills %}
-            <div class="form-group">
-                <label>Required Skills ({{ job.ai_analysis.required_skills|length }}) 
-                    <span class="ai-badge">✨ AI Extracted</span>
-                </label>
-                <div class="skill-tags">
-                    {% for skill in job.ai_analysis.required_skills %}
-                        <span class="skill-badge skill-required">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </div>
-        {% elif parsed_requirements.required_skills %}
-            <div class="form-group">
-                <label>Required Skills ({{ parsed_requirements.required_skills|length }})</label>
-                <div class="skill-tags">
-                    {% for skill in parsed_requirements.required_skills %}
-                        <span class="skill-badge skill-required">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endif %}
-
-        {% if job.ai_analysis.preferred_skills %}
-            <div class="form-group">
-                <label>Preferred Skills ({{ job.ai_analysis.preferred_skills|length }}) 
-                    <span class="ai-badge">✨ AI Extracted</span>
-                </label>
-                <div class="skill-tags">
-                    {% for skill in job.ai_analysis.preferred_skills %}
-                        <span class="skill-badge skill-preferred">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </div>
-        {% elif parsed_requirements.preferred_skills %}
-            <div class="form-group">
-                <label>Preferred Skills ({{ parsed_requirements.preferred_skills|length }})</label>
-                <div class="skill-tags">
-                    {% for skill in parsed_requirements.preferred_skills %}
-                        <span class="skill-badge skill-preferred">{{ skill }}</span>
-                    {% endfor %}
-                </div>
-            </div>
-        {% endif %}
-        <!-- Add this after the skills sections -->
-        {% if job.ai_analysis.technologies_mentioned %}
-        <div class="form-group">
-            <label>Technologies & Tools <span class="ai-badge">✨ AI Extracted</span></label>
-            <div class="skill-tags">
-                {% for tech in job.ai_analysis.technologies_mentioned %}
-                    <span class="skill-badge skill-technology">{{ tech }}</span>
-                {% endfor %}
-            </div>
-        </div>
-        {% endif %}
-
-        <div class="form-row">
-            {% if job.ai_analysis.experience_years %}
-                <div class="form-group">
-                    <label>Experience Requirements <span class="ai-badge">✨</span></label>
-                    <p class="form-text">{{ job.ai_analysis.experience_years }}</p>
-                </div>
-            {% elif parsed_requirements.experience_years %}
-                <div class="form-group">
-                    <label>Experience Requirements</label>
-                    <p class="form-text">{{ parsed_requirements.experience_years }}</p>
-                </div>
-            {% endif %}
-            
-            {% if job.ai_analysis.education_requirements %}
-                <div class="form-group">
-                    <label>Education Requirements <span class="ai-badge">✨</span></label>
-                    <p class="form-text">{{ job.ai_analysis.education_requirements }}</p>
-                </div>
-            {% elif parsed_requirements.education %}
-                <div class="form-group">
-                    <label>Education Requirements</label>
-                    <p class="form-text">{{ parsed_requirements.education }}</p>
-                </div>
-            {% endif %}
-            
-            {% if job.ai_analysis.remote_work_policy %}
-                <div class="form-group">
-                    <label>Work Policy <span class="ai-badge">✨</span></label>
-                    <p class="form-text">{{ job.ai_analysis.remote_work_policy }}</p>
-                </div>
-            {% endif %}
-        </div>
-
-        <!-- AI-Enhanced Resume Focus Areas -->
-        {% if job.ai_analysis.resume_keywords %}
-            <div class="details-section">
-                <h3>Resume Keywords <span class="ai-badge">✨ AI Suggested</span></h3>
-                <div class="focus-areas">
-                    <div class="focus-area">
-                        <strong>Important keywords to include in your resume:</strong>
-                        <div class="keyword-tags">
-                            {% for keyword in job.ai_analysis.resume_keywords %}
-                                <span class="keyword-chip">{{ keyword }}</span>
-                            {% endfor %}
-                        </div>
+                <div class="stat-item">
+                    <div class="match-level match-{{ skill_match_analysis.match_level }}">
+                        {% if skill_match_analysis.match_level == 'excellent' %}
+                            Excellent Match
+                        {% elif skill_match_analysis.match_level == 'good' %}
+                            Good Match
+                        {% elif skill_match_analysis.match_level == 'fair' %}
+                            Fair Match
+                        {% else %}
+                            Needs Work
+                        {% endif %}
                     </div>
                 </div>
             </div>
-        {% elif matching_opportunities %}
-            <div class="details-section">
-                <h3>Resume Focus Areas</h3>
-                <div class="focus-areas">
-                    {% if matching_opportunities.key_technologies %}
-                        <div class="focus-area">
-                            <strong>Key Technologies to Emphasize:</strong>
-                            {% for tech in matching_opportunities.key_technologies %}
-                                <span class="detail-chip">{{ tech }}</span>
-                            {% endfor %}
-                        </div>
-                    {% endif %}
-                    
-                    {% if matching_opportunities.leadership_emphasis %}
-                        <div class="focus-area">
-                            <span class="alert alert-info" style="display: inline-block; padding: 0.5rem;">
-                                <strong>Leadership Experience Important</strong> - Emphasize management and team leadership stories
-                            </span>
-                        </div>
-                    {% endif %}
-                    
-                    {% if matching_opportunities.scale_requirements %}
-                        <div class="focus-area">
-                            <span class="alert alert-info" style="display: inline-block; padding: 0.5rem;">
-                                <strong>Scale/Performance Focus</strong> - Highlight high-traffic systems and optimization work
-                            </span>
-                        </div>
-                    {% endif %}
+        </div>
+
+        <!-- Top Skills to Add -->
+        <div class="skills-section">
+            <div class="skills-header">
+                <div class="header-content">
+                    <h2>Top Skills to Add</h2>
+                    <p class="section-subtitle">Focus on these skills to improve your match for this position</p>
                 </div>
+                
+                {% if skill_match_analysis.top_skill_gaps|length > 5 %}
+                    <div class="pagination-controls">
+                        <span class="page-info">
+                            Showing <span id="current-start">1</span>-<span id="current-end">5</span> 
+                            of {{ skill_match_analysis.top_skill_gaps|length }} skills
+                        </span>
+                        <div class="nav-buttons">
+                            <button id="prev-btn" class="nav-btn" disabled>
+                                ← Previous
+                            </button>
+                            <button id="next-btn" class="nav-btn">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
             </div>
-        {% endif %}
-    </div>
-
-    <!-- AI Key Responsibilities Section -->
-    {% if job.ai_analysis.key_responsibilities %}
-        <div class="form-section">
-            <h2>Key Responsibilities <span class="ai-badge">✨ AI Extracted</span></h2>
-            <div class="requirements-list">
-                {% for responsibility in job.ai_analysis.key_responsibilities %}
-                    <div class="requirement-item responsibility-item">{{ responsibility }}</div>
-                {% endfor %}
-            </div>
-        </div>
-    {% elif parsed_requirements.specific_requirements %}
-        <div class="form-section">
-            <h2>Specific Requirements</h2>
-            <div class="requirements-list">
-                {% for requirement in parsed_requirements.specific_requirements %}
-                    <div class="requirement-item">{{ requirement }}</div>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-
-    <!-- AI Red Flags Section -->
-    {% if job.ai_analysis.red_flags %}
-        <div class="form-section">
-            <h2>Potential Concerns <span class="ai-badge">⚠️ AI Detected</span></h2>
-            <div class="red-flags-list">
-                {% for flag in job.ai_analysis.red_flags %}
-                    <div class="red-flag-item">{{ flag }}</div>
-                {% endfor %}
-            </div>
-        </div>
-    {% endif %}
-
-    <!-- Job Description -->
-    <div class="form-section">
-        <h2>Job Description</h2>
-        <div class="job-description-content">
-            {% if scraped_content.description_html %}
-                {{ scraped_content.description_html|safe }}
+            
+            {% if skill_match_analysis.top_skill_gaps %}
+                <div class="skills-list" id="skills-container">
+                    {% for gap in skill_match_analysis.top_skill_gaps %}
+                        <div class="skill-item {% if forloop.counter0 >= 5 %}skill-hidden{% endif %}" data-index="{{ forloop.counter0 }}">
+                            <div class="skill-info">
+                                <div class="skill-name">{{ gap.skill_name }}</div>
+                                <div class="skill-meta">
+                                    <span class="skill-priority priority-{{ gap.priority }}">
+                                        {% if gap.category == 'technology' or gap.priority_score >= 100 %}
+                                            Technology
+                                        {% elif gap.category == 'required' or gap.priority_score >= 90 %}
+                                            Required
+                                        {% elif gap.category == 'keyword' or gap.priority_score >= 70 %}
+                                            Keyword
+                                        {% else %}
+                                            Preferred
+                                        {% endif %}
+                                    </span>
+                                    <span class="skill-category">{{ gap.suggested_category }}</span>
+                                </div>
+                            </div>
+                            <div class="skill-action">
+                                <a href="{% url 'experience:add_experience' %}?skill={{ gap.skill_name|urlencode }}&job_id={{ job.pk }}" 
+                                   class="btn btn-primary">
+                                    Add Experience for {{ gap.skill_name }}
+                                </a>
+                            </div>
+                        </div>
+                    {% endfor %}
+                </div>
             {% else %}
-                <pre style="white-space: pre-wrap; font-family: inherit; color: #333;">{{ scraped_content.full_description }}</pre>
+                <div class="no-gaps">
+                    <p>Great job! You have all the key skills for this position.</p>
+                    <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">View Job Details</a>
+                </div>
             {% endif %}
         </div>
-    </div>
+    {% else %}
+        <div class="no-analysis">
+            <h2>No Analysis Available</h2>
+            <p>Unable to analyze skills for this job. Make sure you have skills in your profile and the job has been processed.</p>
+            <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">Back to Job</a>
+        </div>
+    {% endif %}
 
-    <!-- Actions -->
+    <!-- Navigation -->
     <div class="actions">
-        <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary">← Back to Jobs</a>
-        {% if not job.ai_analysis %}
-            <button onclick="analyzeWithAI('{{ job.pk }}')" class="btn btn-primary">
-                ✨ Analyze with AI
-            </button>
-        {% endif %}
-        <a href="{% url 'jobs:job_delete' job.pk %}" class="btn btn-danger">Remove Job</a>
+        <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">Back to Job Details</a>
+        <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">Add General Experience</a>
     </div>
 </div>
 
 <style>
-/* Existing styles from your template... */
 .container {
-    max-width: 1200px;
+    max-width: 900px;
     margin: 0 auto;
     padding: 2rem 1rem;
 }
 
 .header {
-    margin-bottom: 2rem;
     text-align: center;
+    margin-bottom: 2rem;
 }
 
 .header h1 {
     margin: 0 0 0.5rem 0;
     color: #333;
+    font-size: 2rem;
 }
 
-.header p {
+.header h2 {
     margin: 0;
     color: #666;
-    font-size: 1.1rem;
-}
-
-.form-section {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-    margin-bottom: 2rem;
-}
-
-.form-section h2 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: #333;
-}
-
-.form-row {
-    display: flex;
-    gap: 1rem;
-    margin-bottom: 1rem;
-}
-
-.form-row .form-group {
-    flex: 1;
-}
-
-.form-group {
-    margin-bottom: 1rem;
-}
-
-.form-group label {
-    display: block;
-    margin-bottom: 0.5rem;
-    font-weight: 600;
-    color: #333;
-}
-
-.form-control {
-    width: 100%;
-    padding: 0.75rem;
-    border: 1px solid #ddd;
-    border-radius: 4px;
-    font-size: 1rem;
-    transition: border-color 0.2s;
-    box-sizing: border-box;
-}
-
-.form-control:focus {
-    outline: none;
-    border-color: #007bff;
-    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
-}
-
-.form-text {
-    color: #666;
-    font-size: 0.9rem;
-    margin: 0;
-}
-
-.btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.2s;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #545b62;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
-.actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
+    font-size: 1.2rem;
+    font-weight: 400;
 }
 
 .alert {
@@ -413,224 +170,410 @@
     color: #721c24;
 }
 
-.alert-info {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
+/* Analysis Summary Bar */
+.analysis-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
 }
 
-/* AI-specific styles */
-.ai-badge {
-    font-size: 0.7rem;
-    padding: 0.15rem 0.4rem;
-    background: linear-gradient(45deg, #6f42c1, #007bff);
-    color: white;
-    border-radius: 8px;
-    font-weight: 500;
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2rem;
+    text-align: center;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
     text-transform: uppercase;
     letter-spacing: 0.5px;
 }
 
-.ai-analyzed {
-    color: #6f42c1 !important;
-    font-weight: 500;
-}
-
-.skill-tags, .keyword-tags {
-    display: flex;
-    flex-wrap: wrap;
-    gap: 0.5rem;
+.match-level {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 1rem;
     margin-top: 0.5rem;
 }
 
-.skill-badge {
-    padding: 0.3rem 0.8rem;
-    border-radius: 16px;
+.match-level.match-excellent {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.match-level.match-good {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.match-level.match-fair {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.match-level.match-poor {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+/* Skills Section */
+.skills-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.skills-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.header-content {
+    flex: 1;
+}
+
+.skills-section h2 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.section-subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.pagination-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nav-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.skills-list {
+    padding: 0;
+}
+
+.skill-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.skill-item.skill-hidden {
+    display: none;
+}
+
+.skill-item:hover {
+    background-color: #f8f9fa;
+}
+
+.skill-item:last-child {
+    border-bottom: none;
+}
+
+.skill-info {
+    flex: 1;
+}
+
+.skill-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.skill-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.skill-priority {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
     font-size: 0.8rem;
     font-weight: 500;
 }
 
-.skill-required {
-    background-color: #ffebee;
-    color: #c62828;
-    border: 1px solid #ffcdd2;
+.skill-priority.priority-critical {
+    background: #dc3545;
+    color: white;
 }
 
-.skill-preferred {
-    background-color: #e8f5e8;
-    color: #2e7d32;
-    border: 1px solid #c8e6c8;
+.skill-priority.priority-high {
+    background: #ffc107;
+    color: #856404;
 }
 
-.skill-technology {
-    background-color: #fff3e0;
-    color: #f57c00;
-    border: 1px solid #ffcc02;
+.skill-priority.priority-medium {
+    background: #6c757d;
+    color: white;
 }
 
-.keyword-chip {
-    background-color: #f3e5ff;
-    color: #6f42c1;
-    padding: 0.2rem 0.6rem;
-    border-radius: 12px;
-    font-size: 0.75rem;
-    font-weight: 500;
-    border: 1px solid #d1a7ff;
-}
-
-.details-section {
-    margin-top: 1.5rem;
-    padding-top: 1.5rem;
-    border-top: 2px solid #e9ecef;
-}
-
-.details-section h3 {
-    margin: 0 0 1rem 0;
+.skill-category {
+    background: #e9ecef;
     color: #495057;
-    font-size: 1.1rem;
-    font-weight: 600;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
 }
 
-.focus-areas {
-    margin-top: 1rem;
+.skill-action {
+    margin-left: 2rem;
 }
 
-.focus-area {
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.no-gaps, .no-analysis {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+}
+
+.no-gaps h2, .no-analysis h2 {
+    color: #28a745;
     margin-bottom: 1rem;
 }
 
-.requirements-list {
-    margin-top: 1rem;
+.actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2rem;
 }
 
-.requirement-item {
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.5rem;
-    background: #f8f9fa;
-    border-left: 4px solid #007bff;
-    border-radius: 4px;
-}
-
-.responsibility-item {
-    border-left-color: #6f42c1;
-    background: #f8f6ff;
-}
-
-.red-flags-list {
-    margin-top: 1rem;
-}
-
-.red-flag-item {
-    padding: 0.75rem 1rem;
-    margin-bottom: 0.5rem;
-    background: #fff5f5;
-    border-left: 4px solid #dc3545;
-    border-radius: 4px;
-    color: #721c24;
-}
-
-.job-description-content {
-    margin-top: 1rem;
-    padding: 1rem;
-    background: #fafafa;
-    border-radius: 4px;
-    max-height: 500px;
-    overflow-y: auto;
-}
-
-.status-update-form {
-    margin-bottom: 1rem;
-}
-
+/* Mobile Responsive */
 @media (max-width: 768px) {
-    .form-row {
-        flex-direction: column;
-        gap: 0;
-    }
-    
-    .actions {
-        flex-direction: column;
-    }
-    
     .container {
         padding: 1rem 0.5rem;
     }
-    
-    .keyword-tags {
+
+    .summary-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .skill-item {
         flex-direction: column;
         align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .skill-action {
+        margin-left: 0;
+        align-self: stretch;
+    }
+
+    .skill-action .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .skills-section h2 {
+        padding: 1rem 1rem 0.5rem 1rem;
+        font-size: 1.3rem;
+    }
+
+    .section-subtitle {
+        padding: 0 1rem 1rem 1rem;
+        font-size: 0.9rem;
+    }
+    .skills-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .header-content .section-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .pagination-controls {
+        align-items: flex-start;
+        margin-top: 1rem;
+    }
+
+    .nav-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .nav-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
     }
 }
 </style>
 
 <script>
-// Status update functionality
 document.addEventListener('DOMContentLoaded', function() {
-    const statusForms = document.querySelectorAll('.status-update-form');
+    const skillItems = document.querySelectorAll('.skill-item');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentStart = document.getElementById('current-start');
+    const currentEnd = document.getElementById('current-end');
     
-    statusForms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            e.preventDefault();
-            
-            const applicationId = form.dataset.applicationId;
-            const formData = new FormData(form);
-            
-            fetch(`/jobs/api/application/${applicationId}/status/`, {
-                method: 'POST',
-                headers: {
-                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
-                },
-                body: formData
-            })
-            .then(response => response.json())
-            .then(data => {
-                if (data.success) {
-                    const alert = document.createElement('div');
-                    alert.className = 'alert alert-success';
-                    alert.textContent = 'Status updated successfully!';
-                    form.parentNode.insertBefore(alert, form);
-                    
-                    setTimeout(() => alert.remove(), 3000);
-                } else {
-                    alert('Failed to update status. Please try again.');
-                }
-            })
-            .catch(error => {
-                console.error('Error:', error);
-                alert('Failed to update status. Please try again.');
-            });
+    if (!skillItems.length || skillItems.length <= 5) {
+        return; // No pagination needed
+    }
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
+    const totalItems = skillItems.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    function showPage(pageNum) {
+        // Hide all items
+        skillItems.forEach(item => {
+            item.style.display = 'none';
         });
-    });
-});
-
-// AI Analysis function
-function analyzeWithAI(jobId) {
-    const button = event.target;
-    button.disabled = true;
-    button.innerHTML = '⏳ Analyzing...';
+        
+        // Show items for current page
+        const startIndex = pageNum * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            if (skillItems[i]) {
+                skillItems[i].style.display = 'flex';
+            }
+        }
+        
+        // Update pagination info
+        if (currentStart && currentEnd) {
+            currentStart.textContent = startIndex + 1;
+            currentEnd.textContent = endIndex;
+        }
+        
+        // Update button states
+        if (prevBtn) {
+            prevBtn.disabled = pageNum === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = pageNum === totalPages - 1;
+        }
+    }
     
-    fetch(`/jobs/api/job/${jobId}/analyze/`, {
-        method: 'POST',
-        headers: {
-            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
-        }
-    })
-    .then(response => response.json())
-    .then(data => {
-        if (data.success) {
-            location.reload(); // Reload to show AI analysis
-        } else {
-            alert('AI analysis failed. Please try again.');
-            button.disabled = false;
-            button.innerHTML = '✨ Analyze with AI';
-        }
-    })
-    .catch(error => {
-        console.error('Error:', error);
-        alert('AI analysis failed. Please try again.');
-        button.disabled = false;
-        button.innerHTML = '✨ Analyze with AI';
-    });
-}
+    // Event listeners
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            if (currentPage > 0) {
+                currentPage--;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    // Initialize first page
+    showPage(0);
+});
 </script>
 {% endblock %}

@@ -12,4 +12,5 @@ urlpatterns = [
     path('dashboard/', views.dashboard, name='job_dashboard'),
     path('api/<uuid:pk>/skills/', views.job_skills_api, name='job_skills_api'),
     path('api/application/<uuid:pk>/status/', views.update_application_status, name='update_application_status'),
+    path('<uuid:pk>/skill-gap/', views.job_skill_gap_simple, name='job_skill_gap'),
 ]
