@@ -9,6 +9,7 @@ from .models import Experience
 from employment.models import Employment
 from education.models import Education
 from .forms import ExperienceForm
+from .services.ai_analyzer import analyze_experience_with_ai, create_skills_from_analysis
 
 
 @login_required
@@ -51,15 +52,11 @@ def experiences(request):
     # Sort by most recent first
     experiences = experiences.order_by('-date_started', '-created_date')
 
-    # Create empty form for adding a new experience
-    # form = ExperienceForm(user=request.user)
-
     # Choices for dropdown filters
     experience_types = Experience.EXPERIENCE_TYPES
 
     return render(request, 'list_experience.html', {
         'experiences': experiences,
-        # 'form': form,
         'experience_types': experience_types,
         'current_filters': {
             'type': filter_type,
@@ -79,8 +76,16 @@ def add_experience(request):
             experience = form.save(commit=False)
             experience.user = request.user  # attach user to entry
             experience.save()
-            messages.success(request, 'Experience entry added successfully!')
-            return redirect('experience:experience')
+            
+            # Check if user wants AI analysis
+            analyze_with_ai = request.POST.get('analyze_with_ai') == 'on'
+            
+            if analyze_with_ai:
+                # Run AI analysis and redirect to skill confirmation page
+                return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
+            else:
+                messages.success(request, 'Experience entry added successfully!')
+                return redirect('experience:experience')
     else:
         # Pre-populate from URL parameters
         initial_data = {}
@@ -99,42 +104,94 @@ def add_experience(request):
     }
     
     return render(request, 'add_experience.html', context)
-    
-    # else:
-    #     # GET request - pre-populate form from URL parameters
-    #     initial_data = {}
-    #     suggested_skill = request.GET.get('suggested_skill', '')
-    #     story_prompt = request.GET.get('story_prompt', '')
-        
-    #     if suggested_skill:
-    #         initial_data['skills_used_text'] = suggested_skill
-    #         initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
+
+
+@login_required
+def analyze_experience_skills(request, experience_id):
+    """AI analyze experience and let user confirm/modify skills to link"""
+    experience = get_object_or_404(Experience, experience_id=experience_id, user=request.user)
+
+    if request.method == 'POST':
+        # User is confirming/modifying the AI suggested skills
+        action = request.POST.get('action')
+        if action == 'accept_all':
+            print("accept all")
+
+            # Handle additional skills from textarea
+            additional_skills_text = request.POST.get('additional_skills', '').strip()
+            if additional_skills_text:
+                additional_skills = [skill.strip() for skill in additional_skills_text.split('\n') if skill.strip()]
+                # Add them to the AI analysis as domain expertise
+                if 'domain_expertise' not in ai_analysis:
+                    ai_analysis['domain_expertise'] = []
+                ai_analysis['domain_expertise'].extend(additional_skills)
             
-    #     if story_prompt:
-    #         initial_data['description'] = f"Story prompt: {story_prompt}\n\n"
-        
-    #     form = ExperienceForm(initial=initial_data)
+            result = create_skills_from_analysis(request.user, ai_analysis, experience)
+            print(ai_analysis)
+            
+            created_count = len(result['created_skills'])
+            linked_count = len(result['skill_links'])
+            
+            messages.success(
+                request, 
+                f'Successfully created {created_count} new skills and linked {linked_count} skills to your experience!'
+            )
+            return redirect('experience:experience')
+            
+        elif action == 'accept_selected':
+            # Accept only selected skills
+            print("accept sel")
+            selected_skills = request.POST.getlist('selected_skills')
+            ai_analysis = experience.details.get('ai_analysis', {})
+
+            # Handle additional skills from textarea
+            additional_skills_text = request.POST.get('additional_skills', '').strip()
+            if additional_skills_text:
+                additional_skills = [skill.strip() for skill in additional_skills_text.split('\n') if skill.strip()]
+                # Add to selected skills list
+                selected_skills.extend(additional_skills)
+                # Also add to AI analysis for processing
+                if 'domain_expertise' not in ai_analysis:
+                    ai_analysis['domain_expertise'] = []
+                ai_analysis['domain_expertise'].extend(additional_skills)
+            
+            # Filter AI analysis to only include selected skills
+            filtered_analysis = filter_analysis_by_selection(ai_analysis, selected_skills)
+            result = create_skills_from_analysis(request.user, filtered_analysis, experience)
+            
+            created_count = len(result['created_skills'])
+            linked_count = len(result['skill_links'])
+            
+            messages.success(
+                request, 
+                f'Successfully created {created_count} new skills and linked {linked_count} skills to your experience!'
+            )
+            return redirect('experience:experience')
+            
+        elif action == 'skip':
+            # Skip AI analysis
+            messages.info(request, 'Experience saved without AI skill analysis.')
+            return redirect('experience:experience')
     
-    # # Build context for both GET and POST (with form errors)
-    # experiences = Experience.objects.filter(user=request.user).order_by('-created_date')
-    # experience_types = Experience.EXPERIENCE_TYPES
-    # suggested_skill = request.GET.get('suggested_skill', '')
+    # GET request or initial load - run AI analysis
+    ai_analysis = analyze_experience_with_ai(experience)
+    print(ai_analysis)
+    if not ai_analysis:
+        messages.error(request, 'Unable to analyze experience with AI. Please try again later.')
+        return redirect('experience:experience')
     
-    # context = {
-    #     'experiences': experiences,
-    #     'form': form,
-    #     'experience_types': experience_types,
-    #     'current_filters': {
-    #         'type': 'all',
-    #         'context': 'all',
-    #         'search': '',
-    #         'visibility': 'all',
-    #     },
-    #     'suggested_skill': suggested_skill,
-    #     'from_skill_analysis': bool(suggested_skill),
-    # }
+    # Prepare skills data for template
+    skills_data = prepare_skills_for_template(ai_analysis)
+
+    context = {
+        'experience': experience,
+        'ai_analysis': ai_analysis,
+        'skills_data': skills_data,
+        'total_skills': sum(len(skills) for skills in skills_data.values()) if skills_data else 0
+    }
     
-    # return render(request, 'experience.html', context)
+    return render(request, 'analyze_skills.html', context)
+
 
 @login_required
 @require_http_methods(["POST"])
@@ -173,6 +230,7 @@ def update_experience(request, experience_id):
                 }
             })
 
+
 @login_required
 @require_http_methods(["POST"])
 def delete_experience(request, experience_id):
@@ -182,9 +240,10 @@ def delete_experience(request, experience_id):
     messages.success(request, 'Experience entry deleted successfully!')
     return redirect('experience:experience')
 
+
 @login_required
 def get_experience_data(request, experience_id):
-    """Fetch a single experience’s data (for AJAX editing)"""
+    """Fetch a single experience's data (for AJAX editing)"""
     experience = get_object_or_404(Experience, experience_id=experience_id, user=request.user)
 
     # Basic fields
@@ -314,3 +373,110 @@ def get_experiences_for_resume(request):
         'total_count': len(experience_data),
         'job_type': job_type,
     })
+
+
+# Helper functions for AI analysis
+def prepare_skills_for_template(ai_analysis):
+    """Prepare skills data in a format suitable for the template, grouped by type with deduplication"""
+    confidence_scores = ai_analysis.get('confidence_scores', {})
+    
+    # Use OrderedDict to maintain order with Tools & Technologies first
+    from collections import OrderedDict
+    skill_groups = OrderedDict([
+        ('Tools & Technologies', []),
+        ('Technical Skills', []),
+        ('Soft Skills', []),
+        ('Methodologies', []),
+        ('Domain Expertise', []),
+        ('Certifications', [])
+    ])
+    
+    # Track seen skills to avoid duplicates
+    seen_skills = set()
+    
+    # Process in priority order - Tools & Technologies first
+    priority_order = [
+        ('tools_and_technologies', 'Tools & Technologies', 'Technical'),
+        ('technical_skills', 'Technical Skills', 'Technical'),
+        ('soft_skills', 'Soft Skills', 'Soft Skill'),
+        ('methodologies', 'Methodologies', 'Professional'),
+        ('domain_expertise', 'Domain Expertise', 'Professional'),
+        ('certifications_implied', 'Certifications', 'Professional')
+    ]
+    
+    for skill_type, group_name, display_type in priority_order:
+        skills_list = ai_analysis.get(skill_type, [])
+        for skill_name in skills_list:
+            # Skip if we've already seen this skill (case-insensitive)
+            skill_name_lower = skill_name.lower()
+            if skill_name_lower in seen_skills:
+                continue
+            
+            seen_skills.add(skill_name_lower)
+            
+            # Determine confidence based on skill type
+            if skill_type == 'technical_skills':
+                confidence = 'High' if confidence_scores.get('technical_skills', 0.5) > 0.7 else 'Medium'
+            elif skill_type == 'soft_skills':
+                confidence = 'High' if confidence_scores.get('soft_skills', 0.5) > 0.7 else 'Medium'
+            elif skill_type == 'tools_and_technologies':
+                confidence = 'High' if confidence_scores.get('tools_and_technologies', 0.5) > 0.7 else 'Medium'
+            else:
+                confidence = 'Medium'
+            
+            skill_groups[group_name].append({
+                'name': skill_name,
+                'confidence': confidence,
+                'type': display_type
+            })
+    
+    # Remove empty groups and return
+    return {group: skills for group, skills in skill_groups.items() if skills}
+
+
+def determine_skill_type_for_display(skill_name, category):
+    """Determine skill type for display purposes"""
+    skill_name_lower = skill_name.lower()
+    category_lower = category.lower()
+    
+    if category_lower in ['programming', 'technology', 'tools']:
+        return 'Technical'
+    elif category_lower in ['communication', 'leadership', 'management']:
+        return 'Soft Skill'
+    elif skill_name_lower in ['python', 'java', 'sql', 'javascript', 'react']:
+        return 'Technical'
+    elif skill_name_lower in ['leadership', 'communication', 'teamwork']:
+        return 'Soft Skill'
+    else:
+        return 'Professional'
+
+
+def filter_analysis_by_selection(ai_analysis, selected_skills):
+    """Filter AI analysis to only include selected skills"""
+    if not selected_skills:
+        return {}
+    
+    filtered_analysis = {
+        'skill_categories': {},
+        'confidence_scores': ai_analysis.get('confidence_scores', {}),
+        'technical_skills': [],
+        'soft_skills': [],
+        'tools_and_technologies': [],
+        'methodologies': [],
+        'domain_expertise': []
+    }
+    
+    # Filter skill categories
+    skill_categories = ai_analysis.get('skill_categories', {})
+    for category, skills in skill_categories.items():
+        filtered_skills = [skill for skill in skills if skill in selected_skills]
+        if filtered_skills:
+            filtered_analysis['skill_categories'][category] = filtered_skills
+    
+    # Filter direct skill lists
+    for skill_type in ['technical_skills', 'soft_skills', 'tools_and_technologies', 'methodologies', 'domain_expertise']:
+        skills_list = ai_analysis.get(skill_type, [])
+        filtered_skills = [skill for skill in skills_list if skill in selected_skills]
+        filtered_analysis[skill_type] = filtered_skills
+    
+    return filtered_analysis

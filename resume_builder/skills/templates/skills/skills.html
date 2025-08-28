@@ -185,7 +185,8 @@
                             <button onclick="linkExistingExperience('{{ skill.skill_id }}')" class="btn btn-sm btn-secondary">
                                 Link Existing Experience
                             </button>
-                            <a href="{% url 'skills:add_experience_for_skill' skill.skill_id %}" class="btn btn-sm btn-primary">
+                            <!-- WIll want to update this in the future -->
+                            <a href="{% url 'experience:add_experience' %}" class="btn btn-sm btn-primary">
                                 Add New Experience
                             </a>
                         </div>
