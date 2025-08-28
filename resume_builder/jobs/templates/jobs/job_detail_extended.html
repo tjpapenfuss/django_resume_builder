@@ -1,0 +1,636 @@
+{% extends 'base.html' %}
+
+{% block title %}{{ job.job_title }} at {{ job.company_name }} - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>{{ job.job_title }}</h1>
+        <p>{{ job.company_name }}
+            {% if job.location %} • {{ job.location }}{% endif %}
+            {% if job.remote_ok %} • <span style="color: #28a745;">Remote OK</span>{% endif %}
+        </p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Application Status Section -->
+    <div class="form-section">
+        <h2>Application Status</h2>
+        <form class="status-update-form" data-application-id="{{ application.pk }}">
+            {% csrf_token %}
+            <div class="form-row">
+                <div class="form-group">
+                    <label for="status">Current Status</label>
+                    <select name="status" id="status" class="form-control">
+                        {% for value, label in application.STATUS_CHOICES %}
+                            <option value="{{ value }}" {% if application.status == value %}selected{% endif %}>
+                                {{ label }}
+                            </option>
+                        {% endfor %}
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <button type="submit" class="btn btn-primary" style="margin-top: 0;">Update Status</button>
+                </div>
+                <div class="form-group">
+                    <label>&nbsp;</label>
+                    <a href="{{ job.url }}" target="_blank" class="btn btn-secondary" style="margin-top: 0;">View Original Posting</a>
+                </div>
+            </div>
+            
+            <div class="form-row">
+                <div class="form-group">
+                    <label>Added to Jobs</label>
+                    <p class="form-text">{{ application.created_at|date:"M d, Y at g:i A" }}</p>
+                </div>
+                <div class="form-group">
+                    <label>Last Scraped</label>
+                    <p class="form-text">{{ job.scraped_at|date:"M d, Y at g:i A" }}</p>
+                </div>
+                <div class="form-group">
+                    {% if job.ai_analysis %}
+                        <label>AI Analyzed</label>
+                        <p class="form-text ai-analyzed">{{ job.raw_json.ai_analyzed_at|date:"M d, Y at g:i A" }} 
+                            <span class="ai-badge">✨ AI Enhanced</span>
+                        </p>
+                    {% else %}
+                        <label>Analysis Status</label>
+                        <p class="form-text">Basic parsing only</p>
+                    {% endif %}
+                </div>
+            </div>
+        </form>
+    </div>
+
+    <!-- Job Requirements Section -->
+    <div class="form-section">
+        <h2>Job Requirements & Skills</h2>
+        
+        {% comment %}
+        Use AI analysis if available, otherwise fall back to parsed_requirements
+        {% endcomment %}
+        {% if job.ai_analysis.required_skills %}
+            <div class="form-group">
+                <label>Required Skills ({{ job.ai_analysis.required_skills|length }}) 
+                    <span class="ai-badge">✨ AI Extracted</span>
+                </label>
+                <div class="skill-tags">
+                    {% for skill in job.ai_analysis.required_skills %}
+                        <span class="skill-badge skill-required">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% elif parsed_requirements.required_skills %}
+            <div class="form-group">
+                <label>Required Skills ({{ parsed_requirements.required_skills|length }})</label>
+                <div class="skill-tags">
+                    {% for skill in parsed_requirements.required_skills %}
+                        <span class="skill-badge skill-required">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+
+        {% if job.ai_analysis.preferred_skills %}
+            <div class="form-group">
+                <label>Preferred Skills ({{ job.ai_analysis.preferred_skills|length }}) 
+                    <span class="ai-badge">✨ AI Extracted</span>
+                </label>
+                <div class="skill-tags">
+                    {% for skill in job.ai_analysis.preferred_skills %}
+                        <span class="skill-badge skill-preferred">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% elif parsed_requirements.preferred_skills %}
+            <div class="form-group">
+                <label>Preferred Skills ({{ parsed_requirements.preferred_skills|length }})</label>
+                <div class="skill-tags">
+                    {% for skill in parsed_requirements.preferred_skills %}
+                        <span class="skill-badge skill-preferred">{{ skill }}</span>
+                    {% endfor %}
+                </div>
+            </div>
+        {% endif %}
+        <!-- Add this after the skills sections -->
+        {% if job.ai_analysis.technologies_mentioned %}
+        <div class="form-group">
+            <label>Technologies & Tools <span class="ai-badge">✨ AI Extracted</span></label>
+            <div class="skill-tags">
+                {% for tech in job.ai_analysis.technologies_mentioned %}
+                    <span class="skill-badge skill-technology">{{ tech }}</span>
+                {% endfor %}
+            </div>
+        </div>
+        {% endif %}
+
+        <div class="form-row">
+            {% if job.ai_analysis.experience_years %}
+                <div class="form-group">
+                    <label>Experience Requirements <span class="ai-badge">✨</span></label>
+                    <p class="form-text">{{ job.ai_analysis.experience_years }}</p>
+                </div>
+            {% elif parsed_requirements.experience_years %}
+                <div class="form-group">
+                    <label>Experience Requirements</label>
+                    <p class="form-text">{{ parsed_requirements.experience_years }}</p>
+                </div>
+            {% endif %}
+            
+            {% if job.ai_analysis.education_requirements %}
+                <div class="form-group">
+                    <label>Education Requirements <span class="ai-badge">✨</span></label>
+                    <p class="form-text">{{ job.ai_analysis.education_requirements }}</p>
+                </div>
+            {% elif parsed_requirements.education %}
+                <div class="form-group">
+                    <label>Education Requirements</label>
+                    <p class="form-text">{{ parsed_requirements.education }}</p>
+                </div>
+            {% endif %}
+            
+            {% if job.ai_analysis.remote_work_policy %}
+                <div class="form-group">
+                    <label>Work Policy <span class="ai-badge">✨</span></label>
+                    <p class="form-text">{{ job.ai_analysis.remote_work_policy }}</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <!-- AI-Enhanced Resume Focus Areas -->
+        {% if job.ai_analysis.resume_keywords %}
+            <div class="details-section">
+                <h3>Resume Keywords <span class="ai-badge">✨ AI Suggested</span></h3>
+                <div class="focus-areas">
+                    <div class="focus-area">
+                        <strong>Important keywords to include in your resume:</strong>
+                        <div class="keyword-tags">
+                            {% for keyword in job.ai_analysis.resume_keywords %}
+                                <span class="keyword-chip">{{ keyword }}</span>
+                            {% endfor %}
+                        </div>
+                    </div>
+                </div>
+            </div>
+        {% elif matching_opportunities %}
+            <div class="details-section">
+                <h3>Resume Focus Areas</h3>
+                <div class="focus-areas">
+                    {% if matching_opportunities.key_technologies %}
+                        <div class="focus-area">
+                            <strong>Key Technologies to Emphasize:</strong>
+                            {% for tech in matching_opportunities.key_technologies %}
+                                <span class="detail-chip">{{ tech }}</span>
+                            {% endfor %}
+                        </div>
+                    {% endif %}
+                    
+                    {% if matching_opportunities.leadership_emphasis %}
+                        <div class="focus-area">
+                            <span class="alert alert-info" style="display: inline-block; padding: 0.5rem;">
+                                <strong>Leadership Experience Important</strong> - Emphasize management and team leadership stories
+                            </span>
+                        </div>
+                    {% endif %}
+                    
+                    {% if matching_opportunities.scale_requirements %}
+                        <div class="focus-area">
+                            <span class="alert alert-info" style="display: inline-block; padding: 0.5rem;">
+                                <strong>Scale/Performance Focus</strong> - Highlight high-traffic systems and optimization work
+                            </span>
+                        </div>
+                    {% endif %}
+                </div>
+            </div>
+        {% endif %}
+    </div>
+
+    <!-- AI Key Responsibilities Section -->
+    {% if job.ai_analysis.key_responsibilities %}
+        <div class="form-section">
+            <h2>Key Responsibilities <span class="ai-badge">✨ AI Extracted</span></h2>
+            <div class="requirements-list">
+                {% for responsibility in job.ai_analysis.key_responsibilities %}
+                    <div class="requirement-item responsibility-item">{{ responsibility }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% elif parsed_requirements.specific_requirements %}
+        <div class="form-section">
+            <h2>Specific Requirements</h2>
+            <div class="requirements-list">
+                {% for requirement in parsed_requirements.specific_requirements %}
+                    <div class="requirement-item">{{ requirement }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- AI Red Flags Section -->
+    {% if job.ai_analysis.red_flags %}
+        <div class="form-section">
+            <h2>Potential Concerns <span class="ai-badge">⚠️ AI Detected</span></h2>
+            <div class="red-flags-list">
+                {% for flag in job.ai_analysis.red_flags %}
+                    <div class="red-flag-item">{{ flag }}</div>
+                {% endfor %}
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Job Description -->
+    <div class="form-section">
+        <h2>Job Description</h2>
+        <div class="job-description-content">
+            {% if scraped_content.description_html %}
+                {{ scraped_content.description_html|safe }}
+            {% else %}
+                <pre style="white-space: pre-wrap; font-family: inherit; color: #333;">{{ scraped_content.full_description }}</pre>
+            {% endif %}
+        </div>
+    </div>
+
+    <!-- Actions -->
+    <div class="actions">
+        <a href="{% url 'jobs:job_list' %}" class="btn btn-secondary">← Back to Jobs</a>
+        {% if not job.ai_analysis %}
+            <button onclick="analyzeWithAI('{{ job.pk }}')" class="btn btn-primary">
+                ✨ Analyze with AI
+            </button>
+        {% endif %}
+        <a href="{% url 'jobs:job_delete' job.pk %}" class="btn btn-danger">Remove Job</a>
+    </div>
+</div>
+
+<style>
+/* Existing styles from your template... */
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-section h2 {
+    margin-top: 0;
+    margin-bottom: 1.5rem;
+    color: #333;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.form-text {
+    color: #666;
+    font-size: 0.9rem;
+    margin: 0;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 1.5rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.alert-info {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+/* AI-specific styles */
+.ai-badge {
+    font-size: 0.7rem;
+    padding: 0.15rem 0.4rem;
+    background: linear-gradient(45deg, #6f42c1, #007bff);
+    color: white;
+    border-radius: 8px;
+    font-weight: 500;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.ai-analyzed {
+    color: #6f42c1 !important;
+    font-weight: 500;
+}
+
+.skill-tags, .keyword-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+    margin-top: 0.5rem;
+}
+
+.skill-badge {
+    padding: 0.3rem 0.8rem;
+    border-radius: 16px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-required {
+    background-color: #ffebee;
+    color: #c62828;
+    border: 1px solid #ffcdd2;
+}
+
+.skill-preferred {
+    background-color: #e8f5e8;
+    color: #2e7d32;
+    border: 1px solid #c8e6c8;
+}
+
+.skill-technology {
+    background-color: #fff3e0;
+    color: #f57c00;
+    border: 1px solid #ffcc02;
+}
+
+.keyword-chip {
+    background-color: #f3e5ff;
+    color: #6f42c1;
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    border: 1px solid #d1a7ff;
+}
+
+.details-section {
+    margin-top: 1.5rem;
+    padding-top: 1.5rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h3 {
+    margin: 0 0 1rem 0;
+    color: #495057;
+    font-size: 1.1rem;
+    font-weight: 600;
+}
+
+.focus-areas {
+    margin-top: 1rem;
+}
+
+.focus-area {
+    margin-bottom: 1rem;
+}
+
+.requirements-list {
+    margin-top: 1rem;
+}
+
+.requirement-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #f8f9fa;
+    border-left: 4px solid #007bff;
+    border-radius: 4px;
+}
+
+.responsibility-item {
+    border-left-color: #6f42c1;
+    background: #f8f6ff;
+}
+
+.red-flags-list {
+    margin-top: 1rem;
+}
+
+.red-flag-item {
+    padding: 0.75rem 1rem;
+    margin-bottom: 0.5rem;
+    background: #fff5f5;
+    border-left: 4px solid #dc3545;
+    border-radius: 4px;
+    color: #721c24;
+}
+
+.job-description-content {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: #fafafa;
+    border-radius: 4px;
+    max-height: 500px;
+    overflow-y: auto;
+}
+
+.status-update-form {
+    margin-bottom: 1rem;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .actions {
+        flex-direction: column;
+    }
+    
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .keyword-tags {
+        flex-direction: column;
+        align-items: flex-start;
+    }
+}
+</style>
+
+<script>
+// Status update functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const statusForms = document.querySelectorAll('.status-update-form');
+    
+    statusForms.forEach(form => {
+        form.addEventListener('submit', function(e) {
+            e.preventDefault();
+            
+            const applicationId = form.dataset.applicationId;
+            const formData = new FormData(form);
+            
+            fetch(`/jobs/api/application/${applicationId}/status/`, {
+                method: 'POST',
+                headers: {
+                    'X-CSRFToken': formData.get('csrfmiddlewaretoken')
+                },
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    const alert = document.createElement('div');
+                    alert.className = 'alert alert-success';
+                    alert.textContent = 'Status updated successfully!';
+                    form.parentNode.insertBefore(alert, form);
+                    
+                    setTimeout(() => alert.remove(), 3000);
+                } else {
+                    alert('Failed to update status. Please try again.');
+                }
+            })
+            .catch(error => {
+                console.error('Error:', error);
+                alert('Failed to update status. Please try again.');
+            });
+        });
+    });
+});
+
+// AI Analysis function
+function analyzeWithAI(jobId) {
+    const button = event.target;
+    button.disabled = true;
+    button.innerHTML = '⏳ Analyzing...';
+    
+    fetch(`/jobs/api/job/${jobId}/analyze/`, {
+        method: 'POST',
+        headers: {
+            'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+        }
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            location.reload(); // Reload to show AI analysis
+        } else {
+            alert('AI analysis failed. Please try again.');
+            button.disabled = false;
+            button.innerHTML = '✨ Analyze with AI';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('AI analysis failed. Please try again.');
+        button.disabled = false;
+        button.innerHTML = '✨ Analyze with AI';
+    });
+}
+</script>
+{% endblock %}

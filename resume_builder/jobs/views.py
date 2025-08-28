@@ -156,6 +156,34 @@ def job_detail(request, pk):
     return render(request, 'jobs/detail.html', context)
 
 @login_required
+def job_detail_extended(request, pk):
+    """Detailed view of a specific job posting"""
+    job = get_object_or_404(JobPosting, pk=pk)
+    
+    # Get or create application record for this user
+    application, created = JobApplication.objects.get_or_create(
+        user=request.user,
+        job_posting=job,
+        defaults={'status': 'saved'}
+    )
+    
+    # Extract data from JSON for display
+    json_data = job.raw_json
+    scraped_content = json_data.get('scraped_content', {})
+    parsed_requirements = json_data.get('parsed_requirements', {})
+    matching_opportunities = json_data.get('matching_opportunities', {})
+    context = {
+        'job': job,
+        'application': application,
+        'parsed_requirements': job.raw_json.get('parsed_requirements', {}),
+        'scraped_content': job.raw_json.get('scraped_content', {}),
+        # AI analysis is accessed via job.ai_analysis property
+        'matching_opportunities': matching_opportunities,
+    }
+    
+    return render(request, 'jobs/job_detail_extended.html', context)
+
+@login_required
 @require_http_methods(["POST"])
 def update_application_status(request, pk):
     """Update application status via AJAX"""
