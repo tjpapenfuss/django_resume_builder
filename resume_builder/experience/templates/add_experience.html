@@ -200,6 +200,20 @@
                 </div>
             </div>
 
+            <!-- AI Analysis Section -->
+            <!-- In your template, replace the manual checkbox with: -->
+            <div class="analysis-option">
+                <label class="checkbox-label">
+                    {{ form.analyze_with_ai }}
+                    <span class="checkmark"></span>
+                    <div class="option-text">
+                        <strong>Analyze with AI</strong>
+                        <p>{{ form.analyze_with_ai.help_text }}</p>
+                        <p>Let our AI identify skills from your experience description and suggest adding them to your profile.</p>
+                    </div>
+                </label>
+            </div>
+
             {% if form.non_field_errors %}
                 <div class="alert alert-error">{{ form.non_field_errors }}</div>
             {% endif %}
@@ -234,6 +248,10 @@
             <div class="tip">
                 <h4>Focus on Impact</h4>
                 <p>Emphasize the value you created, problems you solved, and positive changes you drove. What was different because of your contribution?</p>
+            </div>
+            <div class="tip ai-tip">
+                <h4>AI Skill Detection</h4>
+                <p>Our AI can automatically identify skills from your description. The more detailed and specific you are, the better it can detect relevant skills to add to your profile.</p>
             </div>
         </div>
     </div>
@@ -368,6 +386,98 @@
     font-style: italic;
 }
 
+/* AI Analysis Section */
+.ai-analysis-section {
+    margin-top: 2rem;
+    padding: 2rem;
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border-radius: 12px;
+    border: 2px solid #007bff;
+    position: relative;
+}
+
+.ai-analysis-section h3 {
+    margin: 0 0 1rem 0;
+    color: #007bff;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.analysis-option {
+    margin-top: 1rem;
+}
+
+.checkbox-label {
+    display: flex;
+    align-items: flex-start;
+    cursor: pointer;
+    gap: 1rem;
+    padding: 1rem;
+    background: white;
+    border-radius: 8px;
+    border: 2px solid #e9ecef;
+    transition: all 0.2s;
+}
+
+.checkbox-label:hover {
+    border-color: #007bff;
+    box-shadow: 0 2px 8px rgba(0, 123, 255, 0.1);
+}
+
+.checkbox-label input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.checkmark {
+    width: 20px;
+    height: 20px;
+    background-color: #fff;
+    border: 2px solid #ddd;
+    border-radius: 4px;
+    position: relative;
+    transition: all 0.2s;
+    flex-shrink: 0;
+    margin-top: 2px;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark {
+    background-color: #007bff;
+    border-color: #007bff;
+}
+
+.checkbox-label input[type="checkbox"]:checked + .checkmark::after {
+    content: "";
+    position: absolute;
+    display: block;
+    left: 6px;
+    top: 2px;
+    width: 6px;
+    height: 12px;
+    border: solid white;
+    border-width: 0 2px 2px 0;
+    transform: rotate(45deg);
+}
+
+.option-text {
+    flex: 1;
+}
+
+.option-text strong {
+    display: block;
+    color: #333;
+    font-size: 1.1rem;
+    margin-bottom: 0.5rem;
+}
+
+.option-text p {
+    margin: 0;
+    color: #666;
+    line-height: 1.4;
+}
+
 .actions {
     display: flex;
     gap: 1rem;
@@ -451,6 +561,19 @@
     line-height: 1.5;
 }
 
+.ai-tip {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    border: 1px solid #2196f3;
+}
+
+.ai-tip h4 {
+    color: #1976d2;
+}
+
+.ai-tip p {
+    color: #0d47a1;
+}
+
 @media (max-width: 768px) {
     .form-row {
         flex-direction: column;
@@ -469,74 +592,17 @@
     .tips-grid {
         grid-template-columns: 1fr;
     }
+    
+    .checkbox-label {
+        flex-direction: column;
+        text-align: center;
+        gap: 0.5rem;
+    }
+    
+    .checkmark {
+        align-self: center;
+        margin-top: 0;
+    }
 }
 </style>
-
-<script>
-// Auto-resize textareas
-document.addEventListener('DOMContentLoaded', function() {
-    const textareas = document.querySelectorAll('textarea');
-    textareas.forEach(textarea => {
-        textarea.addEventListener('input', function() {
-            this.style.height = 'auto';
-            this.style.height = (this.scrollHeight) + 'px';
-        });
-        
-        // Initial resize for pre-populated content
-        if (textarea.value) {
-            textarea.style.height = 'auto';
-            textarea.style.height = (textarea.scrollHeight) + 'px';
-        }
-    });
-    
-    // Date validation
-    const dateStarted = document.querySelector('input[name="date_started"]');
-    const dateFinished = document.querySelector('input[name="date_finished"]');
-    
-    function validateDates() {
-        if (dateStarted.value && dateFinished.value) {
-            if (new Date(dateStarted.value) > new Date(dateFinished.value)) {
-                alert('Start date cannot be after end date.');
-                dateFinished.value = '';
-            }
-        }
-    }
-    
-    if (dateStarted) {
-        dateStarted.addEventListener('change', validateDates);
-    }
-    if (dateFinished) {
-        dateFinished.addEventListener('change', validateDates);
-    }
-    
-    // Enhanced form validation
-    const form = document.querySelector('form');
-    if (form) {
-        form.addEventListener('submit', function(e) {
-            const employment = form.querySelector('select[name="employment"]');
-            const education = form.querySelector('select[name="education"]');
-            
-            if (employment && education && employment.value && education.value) {
-                e.preventDefault();
-                alert('Experience cannot be linked to both employment and education. Please select only one.');
-                return false;
-            }
-        });
-    }
-    
-    // Tag and skill input enhancement
-    const tagInputs = document.querySelectorAll('textarea[name*="tags_text"]');
-    const skillInputs = document.querySelectorAll('textarea[name*="skills_used_text"]');
-    
-    [...tagInputs, ...skillInputs].forEach(input => {
-        input.addEventListener('blur', function() {
-            // Clean up tags/skills: remove empty lines, trim whitespace
-            const lines = this.value.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
-            this.value = lines.join('\n');
-        });
-    });
-});
-</script>
 {% endblock %}

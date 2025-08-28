@@ -1,0 +1,780 @@
+{% extends 'base.html' %}
+
+{% block title %}AI Skill Analysis - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <div class="experience-info">
+            <h1>🤖 AI Skill Analysis</h1>
+            <div class="experience-title">
+                <h2>{{ experience.title }}</h2>
+                <p>{{ experience.context_name }} • {{ experience.get_experience_type_display }}</p>
+            </div>
+        </div>
+    </div>
+
+    <div class="analysis-summary">
+        <div class="summary-card">
+            <div class="summary-header">
+                <h3>Analysis Complete!</h3>
+                <span class="skill-count">{{ total_skills }} skills identified</span>
+            </div>
+            <p>Our AI analyzed your experience and identified the following skills. Review and select which ones you'd like to add to your profile.</p>
+        </div>
+    </div>
+
+    <form method="post" id="skill-analysis-form">
+        {% csrf_token %}
+        
+        <div class="skills-section">
+            <div class="section-header">
+                <h3>Identified Skills</h3>
+                <div class="selection-controls">
+                    <button type="button" id="select-all" class="btn btn-sm btn-secondary">Select All</button>
+                    <button type="button" id="select-none" class="btn btn-sm btn-secondary">Select None</button>
+                    <button type="button" id="select-high-confidence" class="btn btn-sm btn-primary">High Confidence Only</button>
+                </div>
+            </div>
+
+            {% if skills_data %}
+                {% for group_name, skills in skills_data.items %}
+                    <div class="skill-group">
+                        <div class="group-header">
+                            <h4 class="group-title">{{ group_name }}</h4>
+                            <div class="group-controls">
+                                <button type="button" class="btn btn-xs btn-outline group-select-all" data-group="{{ group_name|slugify }}">
+                                    Select All
+                                </button>
+                                <button type="button" class="btn btn-xs btn-outline group-select-none" data-group="{{ group_name|slugify }}">
+                                    Select None
+                                </button>
+                                <span class="skill-count">{{ skills|length }} skill{{ skills|length|pluralize }}</span>
+                            </div>
+                        </div>
+                        
+                        <div class="skills-grid" data-group="{{ group_name|slugify }}">
+                            {% for skill in skills %}
+                                <div class="skill-item" data-confidence="{{ skill.confidence|lower }}" data-group="{{ group_name|slugify }}">
+                                    <label class="skill-checkbox">
+                                        <input type="checkbox" 
+                                               name="selected_skills" 
+                                               value="{{ skill.name }}" 
+                                               data-group="{{ group_name|slugify }}"
+                                               {% if skill.confidence == 'High' %}checked{% endif %}>
+                                        <div class="skill-card">
+                                            <div class="skill-header">
+                                                <h5 class="skill-name">{{ skill.name }}</h5>
+                                                <div class="skill-badges">
+                                                    <span class="confidence-badge confidence-{{ skill.confidence|lower }}">
+                                                        {{ skill.confidence }}
+                                                    </span>
+                                                    <span class="type-badge type-{{ skill.type|lower|cut:' ' }}">
+                                                        {{ skill.type }}
+                                                    </span>
+                                                </div>
+                                            </div>
+                                        </div>
+                                    </label>
+                                </div>
+                            {% endfor %}
+                        </div>
+                    </div>
+                {% endfor %}
+            {% else %}
+                <div class="no-skills">
+                    <p>No skills were identified in this experience. You can still save it and manually add skills later.</p>
+                </div>
+            {% endif %}
+        </div>
+
+        <div class="additional-skills-section">
+            <h3>Add Additional Skills</h3>
+            <p>Did we miss any important skills? Add them here (one per line):</p>
+            <textarea name="additional_skills" 
+                      class="form-control" 
+                      rows="3" 
+                      placeholder="e.g., Project Management&#10;Customer Service&#10;Data Visualization"></textarea>
+        </div>
+
+        <div class="actions">
+            <div class="primary-actions">
+                <button type="submit" name="action" value="accept_all" class="btn btn-primary btn-lg" id="accept-all-btn">
+                    Accept All Skills (<span id="total-skills-count" data-total-skills="{{ total_skills }}">{{ total_skills }}</span>)
+                </button>
+                <button type="submit" name="action" value="accept_selected" class="btn btn-success btn-lg" id="accept-selected-btn">
+                    Accept Selected (<span id="selected-count">0</span>)
+                </button>
+            </div>
+            <div class="secondary-actions">
+                <button type="submit" name="action" value="skip" class="btn btn-secondary">
+                    Skip Analysis & Continue
+                </button>
+                <a href="{% url 'experience:experience' %}" class="btn btn-outline">
+                    Cancel & Return to Experiences
+                </a>
+            </div>
+        </div>
+    </form>
+
+    <!-- Preview Section -->
+    <div class="preview-section" id="preview-section" style="display: none;">
+        <h3>Preview: Skills to be Added</h3>
+        <div class="preview-content">
+            <div class="preview-stats">
+                <div class="stat">
+                    <span class="stat-number" id="new-skills-count">0</span>
+                    <span class="stat-label">New Skills</span>
+                </div>
+                <div class="stat">
+                    <span class="stat-number" id="existing-skills-count">0</span>
+                    <span class="stat-label">Existing Skills</span>
+                </div>
+            </div>
+            <div class="preview-skills" id="preview-skills-list">
+                <!-- Dynamic content will be populated here -->
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.experience-info h1 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 2rem;
+}
+
+.experience-title h2 {
+    margin: 0 0 0.5rem 0;
+    color: #007bff;
+    font-size: 1.5rem;
+}
+
+.experience-title p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.analysis-summary {
+    margin-bottom: 2rem;
+}
+
+.summary-card {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px;
+    padding: 2rem;
+    text-align: center;
+}
+
+.summary-header {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.summary-header h3 {
+    margin: 0;
+    font-size: 1.5rem;
+}
+
+.skill-count {
+    background: rgba(255, 255, 255, 0.2);
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 1rem;
+    font-weight: 600;
+}
+
+.summary-card p {
+    margin: 0;
+    font-size: 1.1rem;
+    opacity: 0.9;
+}
+
+.skills-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 2rem;
+    padding-bottom: 1rem;
+    border-bottom: 2px solid #f1f3f4;
+}
+
+.section-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.selection-controls {
+    display: flex;
+    gap: 0.5rem;
+}
+
+/* Skill groups */
+.skill-group {
+    margin-bottom: 2.5rem;
+    background: white;
+    border: 1px solid #e9ecef;
+    border-radius: 12px;
+    overflow: hidden;
+}
+
+.group-header {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    padding: 1.5rem;
+    border-bottom: 1px solid #dee2e6;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+}
+
+.group-title {
+    margin: 0;
+    color: #333;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.group-controls {
+    display: flex;
+    align-items: center;
+    gap: 0.75rem;
+}
+
+.btn-xs {
+    padding: 0.25rem 0.5rem;
+    font-size: 0.75rem;
+    border-radius: 4px;
+}
+
+.skill-count {
+    color: #666;
+    font-size: 0.85rem;
+    background: white;
+    padding: 0.25rem 0.5rem;
+    border-radius: 12px;
+    border: 1px solid #dee2e6;
+}
+
+.skills-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+    gap: 1rem;
+    padding: 1.5rem;
+}
+
+.skill-item {
+    position: relative;
+}
+
+.skill-checkbox {
+    display: block;
+    cursor: pointer;
+    width: 100%;
+}
+
+.skill-checkbox input[type="checkbox"] {
+    position: absolute;
+    opacity: 0;
+    width: 0;
+    height: 0;
+}
+
+.skill-card {
+    background: #f8f9fa;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1rem;
+    transition: all 0.2s;
+    height: 100%;
+}
+
+.skill-checkbox input[type="checkbox"]:checked + .skill-card {
+    background: #e3f2fd;
+    border-color: #2196f3;
+    box-shadow: 0 2px 8px rgba(33, 150, 243, 0.2);
+}
+
+.skill-checkbox:hover .skill-card {
+    border-color: #007bff;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.1);
+}
+
+.skill-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.5rem;
+}
+
+.skill-name {
+    margin: 0;
+    font-size: 1rem;
+    color: #333;
+    font-weight: 600;
+    line-height: 1.2;
+}
+
+.skill-badges {
+    display: flex;
+    flex-direction: column;
+    gap: 0.25rem;
+    align-items: flex-end;
+    flex-shrink: 0;
+    margin-left: 0.5rem;
+}
+
+.confidence-badge, .type-badge {
+    padding: 0.2rem 0.6rem;
+    border-radius: 12px;
+    font-size: 0.75rem;
+    font-weight: 500;
+    white-space: nowrap;
+}
+
+.confidence-high {
+    background: #d4edda;
+    color: #155724;
+}
+
+.confidence-medium {
+    background: #fff3cd;
+    color: #856404;
+}
+
+.confidence-low {
+    background: #f8d7da;
+    color: #721c24;
+}
+
+.type-technical {
+    background: #cfe2ff;
+    color: #084298;
+}
+
+.type-softskill {
+    background: #d1ecf1;
+    color: #0c5460;
+}
+
+.type-professional {
+    background: #e2e3e5;
+    color: #383d41;
+}
+
+.skill-details {
+    margin-top: 0.5rem;
+}
+
+.category {
+    color: #666;
+    font-size: 0.9rem;
+    font-style: italic;
+}
+
+.additional-skills-section {
+    background: white;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.additional-skills-section h3 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.additional-skills-section p {
+    margin: 0 0 1rem 0;
+    color: #666;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 6px;
+    font-size: 1rem;
+    resize: vertical;
+    transition: border-color 0.2s;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.actions {
+    text-align: center;
+    padding: 2rem;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.primary-actions {
+    margin-bottom: 1.5rem;
+}
+
+.secondary-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+    margin: 0 0.5rem;
+}
+
+.btn-sm {
+    padding: 0.5rem 1rem;
+    font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 1rem 2rem;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.btn-success {
+    background-color: #28a745;
+    color: white;
+}
+
+.btn-success:hover {
+    background-color: #218838;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-outline {
+    background-color: transparent;
+    color: #6c757d;
+    border: 2px solid #6c757d;
+}
+
+.btn-outline:hover {
+    background-color: #6c757d;
+    color: white;
+}
+
+.preview-section {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+    border: 1px solid #dee2e6;
+}
+
+.preview-section h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.preview-stats {
+    display: flex;
+    gap: 2rem;
+    margin-bottom: 1.5rem;
+    justify-content: center;
+}
+
+.stat {
+    text-align: center;
+}
+
+.stat-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    color: #007bff;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.preview-skills {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.preview-skill {
+    background: white;
+    border: 1px solid #dee2e6;
+    border-radius: 20px;
+    padding: 0.5rem 1rem;
+    font-size: 0.9rem;
+    color: #333;
+}
+
+.no-skills {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+    background: #f8f9fa;
+    border: 1px dashed #dee2e6;
+    border-radius: 8px;
+}
+
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .skills-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .section-header {
+        flex-direction: column;
+        align-items: stretch;
+        gap: 1rem;
+    }
+    
+    .selection-controls {
+        justify-content: center;
+        flex-wrap: wrap;
+    }
+    
+    .skill-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .skill-badges {
+        flex-direction: row;
+        align-items: flex-start;
+    }
+    
+    .primary-actions {
+        display: flex;
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .secondary-actions {
+        flex-direction: column;
+    }
+    
+    .preview-stats {
+        flex-direction: column;
+        gap: 1rem;
+    }
+    
+    .summary-header {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const checkboxes = document.querySelectorAll('input[name="selected_skills"]');
+    const selectAllBtn = document.getElementById('select-all');
+    const selectNoneBtn = document.getElementById('select-none');
+    const selectHighConfidenceBtn = document.getElementById('select-high-confidence');
+    const selectedCountSpan = document.getElementById('selected-count');
+    const acceptSelectedBtn = document.getElementById('accept-selected-btn');
+    const acceptAllBtn = document.getElementById('accept-all-btn');
+    
+    function updateSelectedCount() {
+        const selectedCount = document.querySelectorAll('input[name="selected_skills"]:checked').length;
+        const additionalSkillsInput = document.querySelector('textarea[name="additional_skills"]');
+        const additionalSkills = additionalSkillsInput ? additionalSkillsInput.value.trim() : "";
+        const additionalSkillsCount = additionalSkills ? additionalSkills.split(/\n|,/).filter(s => s.trim()).length : 0;
+        const totalCount = selectedCount + additionalSkillsCount;
+
+        selectedCountSpan.textContent = totalCount;
+
+        // Update button states
+        acceptSelectedBtn.disabled = totalCount === 0;
+        acceptSelectedBtn.style.opacity = totalCount === 0 ? '0.5' : '1';
+
+        // Update the total count for Accept All button
+        totalSkillsEl.textContent = baseSkillsCount + additionalSkillsCount;
+    }
+
+    const additionalSkillsInput = document.querySelector('textarea[name="additional_skills"]');
+    if (additionalSkillsInput) {
+        additionalSkillsInput.addEventListener('input', function() {
+            updateSelectedCount();
+            updatePreview();
+        });
+    }
+    
+    function updatePreview() {
+        const selectedSkills = Array.from(document.querySelectorAll('input[name="selected_skills"]:checked'))
+            .map(cb => cb.value);
+        
+        const additionalSkills = document.querySelector('textarea[name="additional_skills"]').value.trim();
+        const additionalSkillsList = additionalSkills ? 
+            additionalSkills.split('\n').filter(s => s.trim()).map(s => s.trim()) : [];
+        
+        const allSkills = [...selectedSkills, ...additionalSkillsList];
+        
+        const previewSection = document.getElementById('preview-section');
+        const previewSkillsList = document.getElementById('preview-skills-list');
+        
+        if (allSkills.length > 0) {
+            previewSection.style.display = 'block';
+            previewSkillsList.innerHTML = allSkills.map(skill => 
+                `<span class="preview-skill">${skill}</span>`
+            ).join('');
+        } else {
+            previewSection.style.display = 'none';
+        }
+    }
+    
+    // Event listeners
+    checkboxes.forEach(checkbox => {
+        checkbox.addEventListener('change', function() {
+            updateSelectedCount();
+            updatePreview();
+        });
+    });
+    
+    selectAllBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = true;
+        });
+        updateSelectedCount();
+        updatePreview();
+    });
+    
+    selectNoneBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            checkbox.checked = false;
+        });
+        updateSelectedCount();
+        updatePreview();
+    });
+    
+    selectHighConfidenceBtn.addEventListener('click', function() {
+        checkboxes.forEach(checkbox => {
+            const skillItem = checkbox.closest('.skill-item');
+            const isHighConfidence = skillItem.dataset.confidence === 'high';
+            checkbox.checked = isHighConfidence;
+        });
+        updateSelectedCount();
+        updatePreview();
+    });
+    
+    // Group-specific controls
+    document.querySelectorAll('.group-select-all').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const groupName = this.dataset.group;
+            const groupCheckboxes = document.querySelectorAll(`input[data-group="${groupName}"]`);
+            groupCheckboxes.forEach(checkbox => {
+                checkbox.checked = true;
+            });
+            updateSelectedCount();
+            updatePreview();
+        });
+    });
+    
+    document.querySelectorAll('.group-select-none').forEach(btn => {
+        btn.addEventListener('click', function() {
+            const groupName = this.dataset.group;
+            const groupCheckboxes = document.querySelectorAll(`input[data-group="${groupName}"]`);
+            groupCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            updateSelectedCount();
+            updatePreview();
+        });
+    });
+    
+    // Initial count update
+    updateSelectedCount();
+    updatePreview();
+    
+    // Form validation
+    document.getElementById('skill-analysis-form').addEventListener('submit', function(e) {
+            const action = e.submitter.value;
+            
+            if (action === 'accept_selected' && !hasAdditionalSkills) {
+                const selectedCount = document.querySelectorAll('input[name="selected_skills"]:checked').length;
+                if (selectedCount === 0) {
+                    e.preventDefault();
+                    alert('Please select at least one skill or use "Skip Analysis" to continue without adding skills.');
+                    return;
+                }
+            }
+    });
+    
+    // Keyboard shortcuts
+    document.addEventListener('keydown', function(e) {
+        if (e.ctrlKey || e.metaKey) {
+            switch(e.key) {
+                case 'a':
+                    e.preventDefault();
+                    selectAllBtn.click();
+                    break;
+                case 'd':
+                    e.preventDefault();
+                    selectNoneBtn.click();
+                    break;
+            }
+        }
+    });
+});
+</script>
+{% endblock %}

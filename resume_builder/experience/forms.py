@@ -10,6 +10,16 @@ class ExperienceForm(forms.ModelForm):
     and custom fields that map into JSON (details, skills, tags).
     """
 
+    # --- AI Analysis field ---
+    analyze_with_ai = forms.BooleanField(
+        required=False,
+        initial=True,  # Default to checked
+        widget=forms.CheckboxInput(attrs={
+            'class': 'ai-checkbox'
+        }),
+        help_text='Let AI analyze your experience and suggest skills to add to your profile'
+    )
+
     # --- Extra fields that are stored inside the `details` JSONField ---
     outcomes = forms.CharField(
         required=False,
@@ -85,7 +95,7 @@ class ExperienceForm(forms.ModelForm):
     class Meta:
         """
         Connects the form to the Experience model.
-        Defines which model fields are included and how they’re rendered.
+        Defines which model fields are included and how they're rendered.
         """
         model = Experience
         fields = ['title', 'description', 'experience_type', 'employment', 'education', 
@@ -130,11 +140,13 @@ class ExperienceForm(forms.ModelForm):
             initial['links'] = '\n'.join(instance.details.get('links', []))
             initial['skills_used_text'] = '\n'.join(instance.skills_used or [])
             initial['tags_text'] = '\n'.join(instance.tags or [])
+            # Don't default AI analysis to true for existing experiences
+            initial['analyze_with_ai'] = False
         
         # Call ModelForm init
         super().__init__(*args, **kwargs)
         
-        # Filter dropdowns to only show this user’s Employment/Education
+        # Filter dropdowns to only show this user's Employment/Education
         if self.user:
             self.fields['employment'].queryset = Employment.objects.filter(
                 user=self.user
@@ -168,7 +180,7 @@ class ExperienceForm(forms.ModelForm):
     def clean(self):
         """
         Extra validation rules for the form:
-        - Can’t link to both Employment and Education at the same time.
+        - Can't link to both Employment and Education at the same time.
         - Start date must be before End date.
         """
         cleaned_data = super().clean()
