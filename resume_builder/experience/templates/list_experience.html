@@ -1,12 +1,17 @@
 {% extends 'base.html' %}
 
-{% block title %}Experiences - Resume Builder{% endblock %}
+{% block title %}My Experiences - Resume Builder{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>Experiences</h1>
+        <h1>My Experiences</h1>
         <p>Manage and organize your work, education, and other experience entries</p>
+        <div class="header-actions">
+            <a href="{% url 'experience:add_experience' %}" class="btn btn-primary">
+                + Add New Experience
+            </a>
+        </div>
     </div>
 
     {% if messages %}
@@ -310,194 +315,65 @@
                 {% if current_filters.search or current_filters.type != 'all' or current_filters.context != 'all' %}
                     <p>No experiences match your current filters. <a href="{% url 'experience:experience' %}">Clear filters</a> to see all experiences.</p>
                 {% else %}
-                    <p>No experience entries yet. Add your first one below!</p>
+                    <div class="empty-state-content">
+                        <h3>No Experience Entries Yet</h3>
+                        <p>Start building your experience portfolio by adding your first entry.</p>
+                        <a href="{% url 'experience:add_experience' %}" class="btn btn-primary btn-lg">
+                            Add Your First Experience
+                        </a>
+                    </div>
                 {% endif %}
             </div>
         {% endfor %}
     </div>
-
-    <!-- Add New Experience Form -->
-    <div class="form-section">
-        <h2>Add New Experience</h2>
-        
-        <form method="post" action="{% url 'experience:add_experience' %}">
-            {% csrf_token %}
-            
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.title.label_tag }}
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                        <div class="alert alert-error">{{ form.title.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.experience_type.label_tag }}
-                    {{ form.experience_type }}
-                    {% if form.experience_type.errors %}
-                        <div class="alert alert-error">{{ form.experience_type.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-group">
-                {{ form.description.label_tag }}
-                {{ form.description }}
-                {% if form.description.errors %}
-                    <div class="alert alert-error">{{ form.description.errors }}</div>
-                {% endif %}
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.employment.label_tag }}
-                    {{ form.employment }}
-                    {% if form.employment.help_text %}
-                        <small class="help-text">{{ form.employment.help_text }}</small>
-                    {% endif %}
-                    {% if form.employment.errors %}
-                        <div class="alert alert-error">{{ form.employment.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.education.label_tag }}
-                    {{ form.education }}
-                    {% if form.education.help_text %}
-                        <small class="help-text">{{ form.education.help_text }}</small>
-                    {% endif %}
-                    {% if form.education.errors %}
-                        <div class="alert alert-error">{{ form.education.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.visibility.label_tag }}
-                    {{ form.visibility }}
-                    {% if form.visibility.errors %}
-                        <div class="alert alert-error">{{ form.visibility.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.date_started.label_tag }}
-                    {{ form.date_started }}
-                    {% if form.date_started.errors %}
-                        <div class="alert alert-error">{{ form.date_started.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.date_finished.label_tag }}
-                    {{ form.date_finished }}
-                    {% if form.date_finished.help_text %}
-                        <small class="help-text">{{ form.date_finished.help_text }}</small>
-                    {% endif %}
-                    {% if form.date_finished.errors %}
-                        <div class="alert alert-error">{{ form.date_finished.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.skills_used_text.label_tag }}
-                    {{ form.skills_used_text }}
-                    {% if form.skills_used_text.help_text %}
-                        <small class="help-text">{{ form.skills_used_text.help_text }}</small>
-                    {% endif %}
-                    {% if form.skills_used_text.errors %}
-                        <div class="alert alert-error">{{ form.skills_used_text.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.tags_text.label_tag }}
-                    {{ form.tags_text }}
-                    {% if form.tags_text.help_text %}
-                        <small class="help-text">{{ form.tags_text.help_text }}</small>
-                    {% endif %}
-                    {% if form.tags_text.errors %}
-                        <div class="alert alert-error">{{ form.tags_text.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Experience Details Section -->
-            <div class="details-section">
-                <h3>Additional Details</h3>
-                
-                <div class="form-group">
-                    {{ form.outcomes.label_tag }}
-                    {{ form.outcomes }}
-                    {% if form.outcomes.help_text %}
-                        <small class="help-text">{{ form.outcomes.help_text }}</small>
-                    {% endif %}
-                    {% if form.outcomes.errors %}
-                        <div class="alert alert-error">{{ form.outcomes.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {{ form.challenges.label_tag }}
-                    {{ form.challenges }}
-                    {% if form.challenges.help_text %}
-                        <small class="help-text">{{ form.challenges.help_text }}</small>
-                    {% endif %}
-                    {% if form.challenges.errors %}
-                        <div class="alert alert-error">{{ form.challenges.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        {{ form.tools_used.label_tag }}
-                        {{ form.tools_used }}
-                        {% if form.tools_used.help_text %}
-                            <small class="help-text">{{ form.tools_used.help_text }}</small>
-                        {% endif %}
-                        {% if form.tools_used.errors %}
-                            <div class="alert alert-error">{{ form.tools_used.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="form-group">
-                        {{ form.links.label_tag }}
-                        {{ form.links }}
-                        {% if form.links.errors %}
-                            <div class="alert alert-error">{{ form.links.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-
-                <div class="form-row">
-                    <div class="form-group">
-                        {{ form.team_size.label_tag }}
-                        {{ form.team_size }}
-                        {% if form.team_size.errors %}
-                            <div class="alert alert-error">{{ form.team_size.errors }}</div>
-                        {% endif %}
-                    </div>
-                    <div class="form-group">
-                        {{ form.budget.label_tag }}
-                        {{ form.budget }}
-                        {% if form.budget.errors %}
-                            <div class="alert alert-error">{{ form.budget.errors }}</div>
-                        {% endif %}
-                    </div>
-                </div>
-            </div>
-
-            {% if form.non_field_errors %}
-                <div class="alert alert-error">{{ form.non_field_errors }}</div>
-            {% endif %}
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Add Experience</button>
-                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
-            </div>
-        </form>
-    </div>
 </div>
 
 <style>
+.container {
+    max-width: 1200px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+    position: relative;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    margin-top: 1rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
 /* Filter Section Styles */
 .filter-section {
     background: #f8f9fa;
@@ -543,9 +419,52 @@
     margin-top: 1rem;
 }
 
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
 .btn-sm {
     padding: 0.375rem 0.75rem;
     font-size: 0.875rem;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1.1rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
 }
 
 .experience-count {
@@ -728,44 +647,6 @@
     border-top: 1px solid #eee;
 }
 
-.btn {
-    padding: 0.5rem 1rem;
-    border: none;
-    border-radius: 4px;
-    cursor: pointer;
-    font-size: 0.9rem;
-    text-decoration: none;
-    display: inline-block;
-    transition: background-color 0.2s;
-}
-
-.btn-primary {
-    background-color: #007bff;
-    color: white;
-}
-
-.btn-primary:hover {
-    background-color: #0056b3;
-}
-
-.btn-secondary {
-    background-color: #6c757d;
-    color: white;
-}
-
-.btn-secondary:hover {
-    background-color: #545b62;
-}
-
-.btn-danger {
-    background-color: #dc3545;
-    color: white;
-}
-
-.btn-danger:hover {
-    background-color: #c82333;
-}
-
 .card-preview-details {
     margin-top: 0.5rem;
     display: flex;
@@ -795,20 +676,23 @@
     font-weight: 600;
 }
 
-.details-section h3 {
-    margin: 0 0 1rem 0;
-    color: #495057;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
 .empty-state {
     text-align: center;
-    padding: 2rem;
+    padding: 3rem 2rem;
     color: #666;
     background: #f8f9fa;
     border-radius: 8px;
     margin-bottom: 2rem;
+}
+
+.empty-state-content h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.empty-state-content p {
+    margin: 0 0 1.5rem 0;
+    font-size: 1.1rem;
 }
 
 .empty-state a {
@@ -818,65 +702,6 @@
 
 .empty-state a:hover {
     text-decoration: underline;
-}
-
-.alert {
-    padding: 0.75rem 1rem;
-    margin-bottom: 1rem;
-    border-radius: 4px;
-}
-
-.alert-success {
-    background-color: #d4edda;
-    border: 1px solid #c3e6cb;
-    color: #155724;
-}
-
-.alert-error {
-    background-color: #f8d7da;
-    border: 1px solid #f5c6cb;
-    color: #721c24;
-}
-
-.form-section {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.form-section h2 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: #333;
-}
-
-.actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.header {
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.header h1 {
-    margin: 0 0 0.5rem 0;
-    color: #333;
-}
-
-.header p {
-    margin: 0;
-    color: #666;
-    font-size: 1.1rem;
-}
-
-.container {
-    max-width: 1200px;
-    margin: 0 auto;
-    padding: 2rem 1rem;
 }
 
 @media (max-width: 768px) {
@@ -891,10 +716,6 @@
     }
     
     .card-actions-buttons {
-        flex-direction: column;
-    }
-    
-    .actions {
         flex-direction: column;
     }
     
@@ -956,31 +777,6 @@ document.addEventListener('DOMContentLoaded', function() {
             this.style.height = (this.scrollHeight) + 'px';
         });
     });
-    
-    // Auto-submit filters on change (optional - remove if you prefer manual submit)
-    const filterForm = document.getElementById('filter-form');
-    if (filterForm) {
-        const filterInputs = filterForm.querySelectorAll('input, select');
-        filterInputs.forEach(input => {
-            input.addEventListener('change', function() {
-                // Optional: Auto-submit on filter change
-                // filterForm.submit();
-            });
-        });
-        
-        // Real-time search (optional)
-        const searchInput = document.getElementById('search');
-        if (searchInput) {
-            let searchTimeout;
-            searchInput.addEventListener('input', function() {
-                clearTimeout(searchTimeout);
-                searchTimeout = setTimeout(function() {
-                    // Optional: Auto-submit on search after 500ms delay
-                    // filterForm.submit();
-                }, 500);
-            });
-        }
-    }
 });
 
 // Date validation
@@ -1004,47 +800,6 @@ function validateDates() {
     });
 }
 
-// Initialize date validation
 document.addEventListener('DOMContentLoaded', validateDates);
-
-// Enhanced form validation
-function enhanceFormValidation() {
-    const forms = document.querySelectorAll('.experience-form');
-    forms.forEach(form => {
-        form.addEventListener('submit', function(e) {
-            const employmentSelect = form.querySelector('select[name="employment"]');
-            const educationSelect = form.querySelector('select[name="education"]');
-            
-            if (employmentSelect && educationSelect && 
-                employmentSelect.value && educationSelect.value) {
-                e.preventDefault();
-                alert('Experience cannot be linked to both employment and education. Please select only one.');
-                return false;
-            }
-        });
-    });
-}
-
-// Initialize form validation
-document.addEventListener('DOMContentLoaded', enhanceFormValidation);
-
-// Tag and skill input enhancement
-function enhanceTagInputs() {
-    const tagInputs = document.querySelectorAll('textarea[name*="tags_text"]');
-    const skillInputs = document.querySelectorAll('textarea[name*="skills_used_text"]');
-    
-    [...tagInputs, ...skillInputs].forEach(input => {
-        input.addEventListener('blur', function() {
-            // Clean up tags/skills: remove empty lines, trim whitespace
-            const lines = this.value.split('\n')
-                .map(line => line.trim())
-                .filter(line => line.length > 0);
-            this.value = lines.join('\n');
-        });
-    });
-}
-
-// Initialize tag input enhancement
-document.addEventListener('DOMContentLoaded', enhanceTagInputs);
 </script>
 {% endblock %}

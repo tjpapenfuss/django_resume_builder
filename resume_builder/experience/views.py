@@ -52,14 +52,14 @@ def experiences(request):
     experiences = experiences.order_by('-date_started', '-created_date')
 
     # Create empty form for adding a new experience
-    form = ExperienceForm(user=request.user)
+    # form = ExperienceForm(user=request.user)
 
     # Choices for dropdown filters
     experience_types = Experience.EXPERIENCE_TYPES
 
-    return render(request, 'experience.html', {
+    return render(request, 'list_experience.html', {
         'experiences': experiences,
-        'form': form,
+        # 'form': form,
         'experience_types': experience_types,
         'current_filters': {
             'type': filter_type,
@@ -68,33 +68,6 @@ def experiences(request):
             'visibility': visibility_filter, 
         }
     })
-
-@login_required
-def add_experience(request):
-    """Add a new experience"""
-    form = ExperienceForm(request.POST, user=request.user)
-    if form.is_valid():
-        experience = form.save(commit=False)
-        experience.user = request.user  # attach user to entry
-        experience.save()
-        messages.success(request, 'Experience entry added successfully!')
-        return redirect('experience:experience')
-    else:
-        # If invalid, reload page with errors + current experiences
-        experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
-        experience_types = Experience.EXPERIENCE_TYPES
-
-        return render(request, 'experience.html', {
-            'experiences': experiences,
-            'form': form,
-            'experience_types': experience_types,
-            'current_filters': {
-                'type': 'all',
-                'context': 'all',
-                'search': '',
-                'visibility': 'all',
-            }
-        })
 
 @login_required
 def add_experience(request):
@@ -109,40 +82,59 @@ def add_experience(request):
             messages.success(request, 'Experience entry added successfully!')
             return redirect('experience:experience')
     else:
-        # GET request - pre-populate form from URL parameters
+        # Pre-populate from URL parameters
         initial_data = {}
-        suggested_skill = request.GET.get('suggested_skill', '')
-        story_prompt = request.GET.get('story_prompt', '')
+        suggested_skill = request.GET.get('skill', '')  # Note: changed from 'suggested_skill'
         
         if suggested_skill:
             initial_data['skills_used_text'] = suggested_skill
             initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
-            
-        if story_prompt:
-            initial_data['description'] = f"Story prompt: {story_prompt}\n\n"
         
-        form = ExperienceForm(initial=initial_data)
-    
-    # Build context for both GET and POST (with form errors)
-    experiences = Experience.objects.filter(user=request.user).order_by('-created_date')
-    experience_types = Experience.EXPERIENCE_TYPES
-    suggested_skill = request.GET.get('suggested_skill', '')
+        form = ExperienceForm(initial=initial_data, user=request.user)
     
     context = {
-        'experiences': experiences,
         'form': form,
-        'experience_types': experience_types,
-        'current_filters': {
-            'type': 'all',
-            'context': 'all',
-            'search': '',
-            'visibility': 'all',
-        },
         'suggested_skill': suggested_skill,
         'from_skill_analysis': bool(suggested_skill),
     }
     
-    return render(request, 'experience.html', context)
+    return render(request, 'add_experience.html', context)
+    
+    # else:
+    #     # GET request - pre-populate form from URL parameters
+    #     initial_data = {}
+    #     suggested_skill = request.GET.get('suggested_skill', '')
+    #     story_prompt = request.GET.get('story_prompt', '')
+        
+    #     if suggested_skill:
+    #         initial_data['skills_used_text'] = suggested_skill
+    #         initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
+            
+    #     if story_prompt:
+    #         initial_data['description'] = f"Story prompt: {story_prompt}\n\n"
+        
+    #     form = ExperienceForm(initial=initial_data)
+    
+    # # Build context for both GET and POST (with form errors)
+    # experiences = Experience.objects.filter(user=request.user).order_by('-created_date')
+    # experience_types = Experience.EXPERIENCE_TYPES
+    # suggested_skill = request.GET.get('suggested_skill', '')
+    
+    # context = {
+    #     'experiences': experiences,
+    #     'form': form,
+    #     'experience_types': experience_types,
+    #     'current_filters': {
+    #         'type': 'all',
+    #         'context': 'all',
+    #         'search': '',
+    #         'visibility': 'all',
+    #     },
+    #     'suggested_skill': suggested_skill,
+    #     'from_skill_analysis': bool(suggested_skill),
+    # }
+    
+    # return render(request, 'experience.html', context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -168,7 +160,7 @@ def update_experience(request, experience_id):
             experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
             experience_types = Experience.EXPERIENCE_TYPES
 
-            return render(request, 'experience.html', {
+            return render(request, 'list_experience.html', {
                 'experiences': experiences,
                 'form': form,
                 'experience_types': experience_types,

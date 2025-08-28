@@ -1,0 +1,542 @@
+{% extends 'base.html' %}
+
+{% block title %}Add New Experience - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Add New Experience</h1>
+        {% if from_skill_analysis and suggested_skill %}
+            <p class="skill-suggestion">Adding experience for: <strong>{{ suggested_skill }}</strong></p>
+        {% else %}
+            <p>Create a new experience entry for your resume portfolio</p>
+        {% endif %}
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Add New Experience Form -->
+    <div class="form-section">
+        <form method="post" action="{% url 'experience:add_experience' %}">
+            {% csrf_token %}
+            
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.title.label_tag }}
+                    {{ form.title }}
+                    {% if form.title.errors %}
+                        <div class="alert alert-error">{{ form.title.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.experience_type.label_tag }}
+                    {{ form.experience_type }}
+                    {% if form.experience_type.errors %}
+                        <div class="alert alert-error">{{ form.experience_type.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-group">
+                {{ form.description.label_tag }}
+                {{ form.description }}
+                {% if form.description.errors %}
+                    <div class="alert alert-error">{{ form.description.errors }}</div>
+                {% endif %}
+                {% if from_skill_analysis %}
+                    <small class="help-text skill-help">
+                        <strong>Tip:</strong> Describe a specific situation where you used {{ suggested_skill }} skills. 
+                        Focus on the challenge, your actions, and the results.
+                    </small>
+                {% endif %}
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.employment.label_tag }}
+                    {{ form.employment }}
+                    {% if form.employment.help_text %}
+                        <small class="help-text">{{ form.employment.help_text }}</small>
+                    {% endif %}
+                    {% if form.employment.errors %}
+                        <div class="alert alert-error">{{ form.employment.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.education.label_tag }}
+                    {{ form.education }}
+                    {% if form.education.help_text %}
+                        <small class="help-text">{{ form.education.help_text }}</small>
+                    {% endif %}
+                    {% if form.education.errors %}
+                        <div class="alert alert-error">{{ form.education.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.visibility.label_tag }}
+                    {{ form.visibility }}
+                    {% if form.visibility.errors %}
+                        <div class="alert alert-error">{{ form.visibility.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.date_started.label_tag }}
+                    {{ form.date_started }}
+                    {% if form.date_started.errors %}
+                        <div class="alert alert-error">{{ form.date_started.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.date_finished.label_tag }}
+                    {{ form.date_finished }}
+                    {% if form.date_finished.help_text %}
+                        <small class="help-text">{{ form.date_finished.help_text }}</small>
+                    {% endif %}
+                    {% if form.date_finished.errors %}
+                        <div class="alert alert-error">{{ form.date_finished.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <div class="form-row">
+                <div class="form-group">
+                    {{ form.skills_used_text.label_tag }}
+                    {{ form.skills_used_text }}
+                    {% if form.skills_used_text.help_text %}
+                        <small class="help-text">{{ form.skills_used_text.help_text }}</small>
+                    {% endif %}
+                    {% if from_skill_analysis %}
+                        <small class="help-text skill-help">
+                            Pre-populated with <strong>{{ suggested_skill }}</strong> - add related skills
+                        </small>
+                    {% endif %}
+                    {% if form.skills_used_text.errors %}
+                        <div class="alert alert-error">{{ form.skills_used_text.errors }}</div>
+                    {% endif %}
+                </div>
+                <div class="form-group">
+                    {{ form.tags_text.label_tag }}
+                    {{ form.tags_text }}
+                    {% if form.tags_text.help_text %}
+                        <small class="help-text">{{ form.tags_text.help_text }}</small>
+                    {% endif %}
+                    {% if form.tags_text.errors %}
+                        <div class="alert alert-error">{{ form.tags_text.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Experience Details Section -->
+            <div class="details-section">
+                <h3>Additional Details</h3>
+                <p class="details-intro">Add specific details to make your experience more compelling</p>
+                
+                <div class="form-group">
+                    {{ form.outcomes.label_tag }}
+                    {{ form.outcomes }}
+                    {% if form.outcomes.help_text %}
+                        <small class="help-text">{{ form.outcomes.help_text }}</small>
+                    {% endif %}
+                    {% if form.outcomes.errors %}
+                        <div class="alert alert-error">{{ form.outcomes.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.challenges.label_tag }}
+                    {{ form.challenges }}
+                    {% if form.challenges.help_text %}
+                        <small class="help-text">{{ form.challenges.help_text }}</small>
+                    {% endif %}
+                    {% if form.challenges.errors %}
+                        <div class="alert alert-error">{{ form.challenges.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.tools_used.label_tag }}
+                        {{ form.tools_used }}
+                        {% if form.tools_used.help_text %}
+                            <small class="help-text">{{ form.tools_used.help_text }}</small>
+                        {% endif %}
+                        {% if form.tools_used.errors %}
+                            <div class="alert alert-error">{{ form.tools_used.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.links.label_tag }}
+                        {{ form.links }}
+                        {% if form.links.errors %}
+                            <div class="alert alert-error">{{ form.links.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.team_size.label_tag }}
+                        {{ form.team_size }}
+                        {% if form.team_size.errors %}
+                            <div class="alert alert-error">{{ form.team_size.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.budget.label_tag }}
+                        {{ form.budget }}
+                        {% if form.budget.errors %}
+                            <div class="alert alert-error">{{ form.budget.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary btn-lg">Add Experience</button>
+                {% if from_skill_analysis %}
+                    <a href="javascript:history.back()" class="btn btn-secondary">Back to Skill Analysis</a>
+                {% else %}
+                    <a href="{% url 'experience:experience' %}" class="btn btn-secondary">Back to Experiences</a>
+                {% endif %}
+                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Experience Writing Tips -->
+    <div class="tips-section">
+        <h3>Writing Tips for Strong Experiences</h3>
+        <div class="tips-grid">
+            <div class="tip">
+                <h4>Use the STAR Method</h4>
+                <p><strong>Situation:</strong> Set the context<br>
+                <strong>Task:</strong> Describe your responsibility<br>
+                <strong>Action:</strong> Explain what you did<br>
+                <strong>Result:</strong> Share the outcome</p>
+            </div>
+            <div class="tip">
+                <h4>Quantify Results</h4>
+                <p>Include specific numbers, percentages, timeframes, or metrics wherever possible. "Increased sales by 25%" is stronger than "Improved sales performance".</p>
+            </div>
+            <div class="tip">
+                <h4>Focus on Impact</h4>
+                <p>Emphasize the value you created, problems you solved, and positive changes you drove. What was different because of your contribution?</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.skill-suggestion {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    color: #1976d2;
+    padding: 1rem;
+    border-radius: 8px;
+    margin-top: 1rem;
+    font-size: 1rem;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
+    margin-bottom: 2rem;
+}
+
+.form-row {
+    display: flex;
+    gap: 1rem;
+    margin-bottom: 1rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ddd;
+    border-radius: 4px;
+    font-size: 1rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0, 123, 255, 0.25);
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.25rem;
+    color: #666;
+    font-size: 0.85rem;
+}
+
+.skill-help {
+    background: #f0f8ff;
+    color: #0066cc;
+    padding: 0.5rem;
+    border-radius: 4px;
+    border-left: 3px solid #007bff;
+}
+
+.details-section {
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 2px solid #e9ecef;
+}
+
+.details-section h3 {
+    margin: 0 0 0.5rem 0;
+    color: #495057;
+    font-size: 1.2rem;
+    font-weight: 600;
+}
+
+.details-intro {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-style: italic;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    margin-top: 2rem;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: background-color 0.2s;
+}
+
+.btn-lg {
+    padding: 0.75rem 1.5rem;
+    font-size: 1rem;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.tips-section {
+    background: #f8f9fa;
+    padding: 2rem;
+    border-radius: 8px;
+    border: 1px solid #dee2e6;
+}
+
+.tips-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #495057;
+    font-size: 1.2rem;
+    text-align: center;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.tip {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 6px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.tip h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.tip p {
+    margin: 0;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.5;
+}
+
+@media (max-width: 768px) {
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .actions {
+        flex-direction: column;
+        align-items: center;
+    }
+    
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .tips-grid {
+        grid-template-columns: 1fr;
+    }
+}
+</style>
+
+<script>
+// Auto-resize textareas
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+        
+        // Initial resize for pre-populated content
+        if (textarea.value) {
+            textarea.style.height = 'auto';
+            textarea.style.height = (textarea.scrollHeight) + 'px';
+        }
+    });
+    
+    // Date validation
+    const dateStarted = document.querySelector('input[name="date_started"]');
+    const dateFinished = document.querySelector('input[name="date_finished"]');
+    
+    function validateDates() {
+        if (dateStarted.value && dateFinished.value) {
+            if (new Date(dateStarted.value) > new Date(dateFinished.value)) {
+                alert('Start date cannot be after end date.');
+                dateFinished.value = '';
+            }
+        }
+    }
+    
+    if (dateStarted) {
+        dateStarted.addEventListener('change', validateDates);
+    }
+    if (dateFinished) {
+        dateFinished.addEventListener('change', validateDates);
+    }
+    
+    // Enhanced form validation
+    const form = document.querySelector('form');
+    if (form) {
+        form.addEventListener('submit', function(e) {
+            const employment = form.querySelector('select[name="employment"]');
+            const education = form.querySelector('select[name="education"]');
+            
+            if (employment && education && employment.value && education.value) {
+                e.preventDefault();
+                alert('Experience cannot be linked to both employment and education. Please select only one.');
+                return false;
+            }
+        });
+    }
+    
+    // Tag and skill input enhancement
+    const tagInputs = document.querySelectorAll('textarea[name*="tags_text"]');
+    const skillInputs = document.querySelectorAll('textarea[name*="skills_used_text"]');
+    
+    [...tagInputs, ...skillInputs].forEach(input => {
+        input.addEventListener('blur', function() {
+            // Clean up tags/skills: remove empty lines, trim whitespace
+            const lines = this.value.split('\n')
+                .map(line => line.trim())
+                .filter(line => line.length > 0);
+            this.value = lines.join('\n');
+        });
+    });
+});
+</script>
+{% endblock %}

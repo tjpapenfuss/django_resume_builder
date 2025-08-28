@@ -282,7 +282,7 @@ def add_skill(request):
             skill.full_clean()
             skill.save()
             messages.success(request, 'Skill added successfully!')
-            return redirect('skills')
+            return redirect('skills:skills')
         except ValidationError as e:
             if hasattr(e, 'error_dict'):
                 for field, errors in e.error_dict.items():
@@ -290,11 +290,8 @@ def add_skill(request):
             else:
                 form.add_error(None, str(e))
     
-    # If form is invalid, re-render with errors
     filter_form = SkillFilterForm(user=request.user)
-    skills = Skill.objects.filter(user=request.user).annotate(
-        experience_count=Count('experiences', distinct=True)
-    ).order_by('-created_date')
+    skills = Skill.objects.filter(user=request.user).order_by('-created_date')
     
     existing_categories = list(Skill.objects.filter(user=request.user).values_list('category', flat=True).distinct())
     predefined_categories = [choice[0] for choice in Skill.SKILL_CATEGORIES]
@@ -323,7 +320,7 @@ def update_skill(request, skill_id):
             skill.full_clean()
             skill.save()
             messages.success(request, 'Skill updated successfully!')
-            return redirect('skills')
+            return redirect('skills:skills')
         except ValidationError as e:
             form.add_error(None, e)
     
@@ -335,9 +332,7 @@ def update_skill(request, skill_id):
         })
     else:
         filter_form = SkillFilterForm(user=request.user)
-        skills = Skill.objects.filter(user=request.user).annotate(
-            experience_count=Count('experiences', distinct=True)
-        ).order_by('-created_date')
+        skills = Skill.objects.filter(user=request.user).order_by('-created_date')
         
         existing_categories = list(Skill.objects.filter(user=request.user).values_list('category', flat=True).distinct())
         predefined_categories = [choice[0] for choice in Skill.SKILL_CATEGORIES]
@@ -374,7 +369,7 @@ def delete_skill(request, skill_id):
     else:
         messages.success(request, f'Skill "{skill_title}" deleted successfully!')
     
-    return redirect('skills')
+    return redirect('skills:skills')
 
 @login_required
 def get_skill_data(request, skill_id):
