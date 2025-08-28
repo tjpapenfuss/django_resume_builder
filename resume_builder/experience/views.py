@@ -115,8 +115,6 @@ def analyze_experience_skills(request, experience_id):
         # User is confirming/modifying the AI suggested skills
         action = request.POST.get('action')
         if action == 'accept_all':
-            print("accept all")
-
             # Handle additional skills from textarea
             additional_skills_text = request.POST.get('additional_skills', '').strip()
             if additional_skills_text:
@@ -127,7 +125,6 @@ def analyze_experience_skills(request, experience_id):
                 ai_analysis['domain_expertise'].extend(additional_skills)
             
             result = create_skills_from_analysis(request.user, ai_analysis, experience)
-            print(ai_analysis)
             
             created_count = len(result['created_skills'])
             linked_count = len(result['skill_links'])
@@ -139,18 +136,26 @@ def analyze_experience_skills(request, experience_id):
             return redirect('experience:experience')
             
         elif action == 'accept_selected':
-            # Accept only selected skills
-            print("accept sel")
             selected_skills = request.POST.getlist('selected_skills')
             ai_analysis = experience.details.get('ai_analysis', {})
-
+            
             # Handle additional skills from textarea
             additional_skills_text = request.POST.get('additional_skills', '').strip()
+            additional_skills = []
             if additional_skills_text:
                 additional_skills = [skill.strip() for skill in additional_skills_text.split('\n') if skill.strip()]
-                # Add to selected skills list
                 selected_skills.extend(additional_skills)
-                # Also add to AI analysis for processing
+            
+            # If no AI skills selected but user added custom skills, create minimal analysis
+            if not selected_skills and additional_skills:
+                # Create a minimal analysis with just the user's skills
+                ai_analysis = {
+                    'domain_expertise': additional_skills,
+                    'skill_categories': {'Other': additional_skills}
+                }
+                selected_skills = additional_skills
+            elif additional_skills:
+                # Add custom skills to existing analysis
                 if 'domain_expertise' not in ai_analysis:
                     ai_analysis['domain_expertise'] = []
                 ai_analysis['domain_expertise'].extend(additional_skills)
@@ -175,7 +180,6 @@ def analyze_experience_skills(request, experience_id):
     
     # GET request or initial load - run AI analysis
     ai_analysis = analyze_experience_with_ai(experience)
-    print(ai_analysis)
     if not ai_analysis:
         messages.error(request, 'Unable to analyze experience with AI. Please try again later.')
         return redirect('experience:experience')
