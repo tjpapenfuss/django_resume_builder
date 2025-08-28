@@ -1,0 +1,577 @@
+{% extends 'base.html' %}
+
+{% block title %}Add Skill - Resume Builder{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Add New Skill</h1>
+        <p>Add a new professional skill to your profile</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <div class="form-section">
+        <form method="post" action="{% url 'skills:add_skill' %}">
+            {% csrf_token %}
+            
+            <!-- Basic Information -->
+            <div class="section">
+                <h2>Basic Information</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.title.label_tag }}
+                        {{ form.title }}
+                        <small class="help-text">Enter skill title (e.g., Python, Team Leadership, Data Analysis)</small>
+                        {% if form.title.errors %}
+                            <div class="alert alert-error">{{ form.title.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.category.label_tag }}
+                        {{ form.category }}
+                        <datalist id="category-options">
+                            {% for category in predefined_categories %}
+                                <option value="{{ category }}">
+                            {% endfor %}
+                            {% for category in existing_categories %}
+                                {% if category not in predefined_categories %}
+                                    <option value="{{ category }}">
+                                {% endif %}
+                            {% endfor %}
+                        </datalist>
+                        {% if form.category.help_text %}
+                            <small class="help-text">{{ form.category.help_text }}</small>
+                        {% endif %}
+                        {% if form.category.errors %}
+                            <div class="alert alert-error">{{ form.category.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.skill_type.label_tag }}
+                        {{ form.skill_type }}
+                        <small class="help-text">Select the type that best describes this skill</small>
+                        {% if form.skill_type.errors %}
+                            <div class="alert alert-error">{{ form.skill_type.errors }}</div>
+                        {% endif %}
+                    </div>
+                    <div class="form-group">
+                        {{ form.skill_level.label_tag }}
+                        {{ form.skill_level }}
+                        <small class="help-text">How would you rate your current proficiency?</small>
+                        {% if form.skill_level.errors %}
+                            <div class="alert alert-error">{{ form.skill_level.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+
+            <!-- Experience Details -->
+            <div class="section">
+                <h2>Experience Details</h2>
+                
+                <div class="form-row">
+                    <div class="form-group">
+                        {{ form.years_experience.label_tag }}
+                        {{ form.years_experience }}
+                        {% if form.years_experience.help_text %}
+                            <small class="help-text">{{ form.years_experience.help_text }}</small>
+                        {% endif %}
+                        {% if form.years_experience.errors %}
+                            <div class="alert alert-error">{{ form.years_experience.errors }}</div>
+                        {% endif %}
+                    </div>
+                </div>
+
+                <div class="form-group">
+                    {{ form.description.label_tag }}
+                    {{ form.description }}
+                    <small class="help-text">Provide a brief description of your experience with this skill</small>
+                    {% if form.description.errors %}
+                        <div class="alert alert-error">{{ form.description.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            <!-- Additional Details -->
+            <div class="section">
+                <h2>Additional Details <span class="optional-label">(Optional)</span></h2>
+                
+                <div class="form-group">
+                    {{ form.certifications.label_tag }}
+                    {{ form.certifications }}
+                    {% if form.certifications.help_text %}
+                        <small class="help-text">{{ form.certifications.help_text }}</small>
+                    {% endif %}
+                    {% if form.certifications.errors %}
+                        <div class="alert alert-error">{{ form.certifications.errors }}</div>
+                    {% endif %}
+                </div>
+
+                <div class="form-group">
+                    {{ form.projects.label_tag }}
+                    {{ form.projects }}
+                    {% if form.projects.help_text %}
+                        <small class="help-text">{{ form.projects.help_text }}</small>
+                    {% endif %}
+                    {% if form.projects.errors %}
+                        <div class="alert alert-error">{{ form.projects.errors }}</div>
+                    {% endif %}
+                </div>
+            </div>
+
+            {% if form.non_field_errors %}
+                <div class="alert alert-error">{{ form.non_field_errors }}</div>
+            {% endif %}
+
+            <div class="actions">
+                <button type="submit" class="btn btn-primary">Add Skill</button>
+                <a href="{% url 'skills:skills' %}" class="btn btn-secondary">Cancel</a>
+            </div>
+        </form>
+    </div>
+
+    <!-- Tips Section -->
+    <div class="tips-section">
+        <h3>Tips for Adding Skills</h3>
+        <div class="tips-grid">
+            <div class="tip-card">
+                <h4>Be Specific</h4>
+                <p>Instead of "Programming", use "Python Programming" or "JavaScript Development"</p>
+            </div>
+            <div class="tip-card">
+                <h4>Include Context</h4>
+                <p>Mention specific frameworks, tools, or methodologies you've used</p>
+            </div>
+            <div class="tip-card">
+                <h4>Quantify Experience</h4>
+                <p>Include years of experience and any relevant certifications</p>
+            </div>
+            <div class="tip-card">
+                <h4>Connect to Projects</h4>
+                <p>List specific projects where you applied this skill</p>
+            </div>
+        </div>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 800px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.form-section {
+    background: #fff;
+    padding: 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+}
+
+.section {
+    margin-bottom: 2.5rem;
+    padding-bottom: 2rem;
+    border-bottom: 2px solid #f1f3f4;
+}
+
+.section:last-child {
+    border-bottom: none;
+    margin-bottom: 0;
+}
+
+.section h2 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    font-size: 1.3rem;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+}
+
+.optional-label {
+    font-size: 0.9rem;
+    color: #666;
+    font-weight: normal;
+}
+
+.form-row {
+    display: flex;
+    gap: 1.5rem;
+    margin-bottom: 1.5rem;
+}
+
+.form-row .form-group {
+    flex: 1;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+    font-size: 1rem;
+}
+
+.form-control {
+    width: 100%;
+    padding: 0.875rem;
+    border: 2px solid #e1e5e9;
+    border-radius: 8px;
+    font-size: 1rem;
+    transition: all 0.2s;
+    background-color: #fff;
+}
+
+.form-control:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 3px rgba(0, 123, 255, 0.1);
+}
+
+.form-control:hover {
+    border-color: #b8c4ce;
+}
+
+select.form-control {
+    cursor: pointer;
+}
+
+textarea.form-control {
+    resize: vertical;
+    min-height: 100px;
+}
+
+.help-text {
+    display: block;
+    margin-top: 0.5rem;
+    color: #666;
+    font-size: 0.9rem;
+    line-height: 1.4;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-top: 0.5rem;
+    border-radius: 6px;
+    font-size: 0.9rem;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    margin-top: 2rem;
+    justify-content: center;
+}
+
+.btn {
+    padding: 0.875rem 2rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 600;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+    min-width: 120px;
+    text-align: center;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.2);
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+    transform: translateY(-1px);
+}
+
+/* Tips Section */
+.tips-section {
+    background: linear-gradient(135deg, #f8f9fa 0%, #e9ecef 100%);
+    border-radius: 12px;
+    padding: 2rem;
+    margin-top: 2rem;
+}
+
+.tips-section h3 {
+    margin: 0 0 1.5rem 0;
+    color: #333;
+    text-align: center;
+    font-size: 1.2rem;
+}
+
+.tips-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(250px, 1fr));
+    gap: 1.5rem;
+}
+
+.tip-card {
+    background: white;
+    padding: 1.5rem;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    transition: transform 0.2s;
+}
+
+.tip-card:hover {
+    transform: translateY(-2px);
+}
+
+.tip-card h4 {
+    margin: 0 0 0.75rem 0;
+    color: #007bff;
+    font-size: 1.1rem;
+}
+
+.tip-card p {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+    line-height: 1.5;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+    
+    .form-section {
+        padding: 1.5rem;
+    }
+    
+    .form-row {
+        flex-direction: column;
+        gap: 0;
+    }
+    
+    .actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+    
+    .btn {
+        margin-bottom: 0.5rem;
+    }
+    
+    .tips-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    .tips-section {
+        padding: 1.5rem;
+    }
+}
+
+/* Form enhancements */
+.form-group input[list]:focus + datalist {
+    display: block;
+}
+
+/* Auto-resize for textareas */
+textarea {
+    font-family: inherit;
+}
+
+/* Category input styling */
+input[name="category"] {
+    text-transform: capitalize;
+}
+
+/* Skill type descriptions */
+select[name="skill_type"] option[value="Soft"]::after {
+    content: " - Communication, leadership, etc.";
+}
+
+/* Focus states for better accessibility */
+.form-control:focus,
+.btn:focus {
+    outline: 2px solid #007bff;
+    outline-offset: 2px;
+}
+
+/* Loading state for form submission */
+form.submitting .btn[type="submit"] {
+    opacity: 0.7;
+    cursor: not-allowed;
+}
+
+form.submitting .btn[type="submit"]::after {
+    content: " ...";
+}
+</style>
+
+<script>
+// Auto-resize textareas
+document.addEventListener('DOMContentLoaded', function() {
+    const textareas = document.querySelectorAll('textarea');
+    textareas.forEach(textarea => {
+        // Set initial height
+        textarea.style.height = 'auto';
+        textarea.style.height = textarea.scrollHeight + 'px';
+        
+        // Add input listener for dynamic resizing
+        textarea.addEventListener('input', function() {
+            this.style.height = 'auto';
+            this.style.height = (this.scrollHeight) + 'px';
+        });
+    });
+    
+    // Category input enhancement - convert to title case
+    const categoryInput = document.querySelector('input[name="category"]');
+    if (categoryInput) {
+        categoryInput.addEventListener('input', function() {
+            const words = this.value.split(' ');
+            const titleCase = words.map(word => 
+                word.charAt(0).toUpperCase() + word.slice(1).toLowerCase()
+            ).join(' ');
+            if (this.value !== titleCase) {
+                const cursorPos = this.selectionStart;
+                this.value = titleCase;
+                this.setSelectionRange(cursorPos, cursorPos);
+            }
+        });
+    }
+    
+    // Form validation enhancement
+    const form = document.querySelector('form');
+    const submitBtn = document.querySelector('button[type="submit"]');
+    
+    if (form && submitBtn) {
+        form.addEventListener('submit', function(e) {
+            // Add loading state
+            form.classList.add('submitting');
+            submitBtn.disabled = true;
+            
+            // Basic client-side validation
+            const titleInput = document.querySelector('input[name="title"]');
+            const categoryInput = document.querySelector('input[name="category"]');
+            
+            if (titleInput && titleInput.value.trim().length < 2) {
+                e.preventDefault();
+                alert('Please enter a skill title with at least 2 characters.');
+                form.classList.remove('submitting');
+                submitBtn.disabled = false;
+                titleInput.focus();
+                return;
+            }
+            
+            if (categoryInput && categoryInput.value.trim().length < 2) {
+                e.preventDefault();
+                alert('Please enter a category with at least 2 characters.');
+                form.classList.remove('submitting');
+                submitBtn.disabled = false;
+                categoryInput.focus();
+                return;
+            }
+        });
+    }
+    
+    // Years experience validation
+    const yearsInput = document.querySelector('input[name="years_experience"]');
+    if (yearsInput) {
+        yearsInput.addEventListener('input', function() {
+            const value = parseInt(this.value);
+            if (value < 0) {
+                this.value = '';
+            }
+            if (value > 50) {
+                this.setCustomValidity('Please enter a realistic number of years (50 or less)');
+            } else {
+                this.setCustomValidity('');
+            }
+        });
+    }
+    
+    // Skill level helper descriptions
+    const skillLevelSelect = document.querySelector('select[name="skill_level"]');
+    if (skillLevelSelect) {
+        const descriptions = {
+            'Entry': 'Basic understanding, learning the fundamentals',
+            'Intermediate': 'Comfortable using in daily work, some experience',
+            'Advanced': 'Proficient, can handle complex tasks independently',
+            'Expert': 'Deep expertise, can mentor others and solve difficult problems',
+            'Mastery': 'Recognized authority, innovative and thought leadership level'
+        };
+        
+        skillLevelSelect.addEventListener('change', function() {
+            const helpText = this.parentNode.querySelector('.help-text');
+            if (helpText && descriptions[this.value]) {
+                helpText.textContent = descriptions[this.value];
+            } else if (helpText) {
+                helpText.textContent = 'How would you rate your current proficiency?';
+            }
+        });
+    }
+});
+
+// Prevent form double submission
+let formSubmitted = false;
+document.addEventListener('submit', function(e) {
+    if (formSubmitted) {
+        e.preventDefault();
+        return false;
+    }
+    formSubmitted = true;
+});
+</script>
+{% endblock %}

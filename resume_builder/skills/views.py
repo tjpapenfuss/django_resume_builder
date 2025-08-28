@@ -269,42 +269,38 @@ def skill_analysis_history(request):
     
     return render(request, 'skills/analysis_history.html', context)
 
-# Update existing views to work with new model structure
 @login_required
-@require_http_methods(["POST"])
+@require_http_methods(["GET", "POST"])
 def add_skill(request):
     """Add new skill entry"""
-    form = SkillForm(request.POST, user=request.user)
-    if form.is_valid():
-        skill = form.save(commit=False)
-        skill.user = request.user
-        try:
-            skill.full_clean()
-            skill.save()
-            messages.success(request, 'Skill added successfully!')
-            return redirect('skills:skills')
-        except ValidationError as e:
-            if hasattr(e, 'error_dict'):
-                for field, errors in e.error_dict.items():
-                    form.add_error(field, errors)
-            else:
-                form.add_error(None, str(e))
+    if request.method == 'POST':
+        form = SkillForm(request.POST, user=request.user)
+        if form.is_valid():
+            skill = form.save(commit=False)
+            skill.user = request.user
+            try:
+                skill.full_clean()
+                skill.save()
+                messages.success(request, 'Skill added successfully!')
+                return redirect('skills:skills')
+            except ValidationError as e:
+                if hasattr(e, 'error_dict'):
+                    for field, errors in e.error_dict.items():
+                        form.add_error(field, errors)
+                else:
+                    form.add_error(None, str(e))
+    else:
+        # GET request - show empty form
+        form = SkillForm(user=request.user)
     
-    filter_form = SkillFilterForm(user=request.user)
-    skills = Skill.objects.filter(user=request.user).order_by('-created_date')
-    
+    # Get data needed for the template
     existing_categories = list(Skill.objects.filter(user=request.user).values_list('category', flat=True).distinct())
     predefined_categories = [choice[0] for choice in Skill.SKILL_CATEGORIES]
-    latest_analysis = SkillAnalysis.objects.filter(user=request.user).first()
     
-    return render(request, 'skills/skills.html', {
-        'skills': skills,
+    return render(request, 'skills/add_skill.html', {
         'form': form,
-        'filter_form': filter_form,
         'existing_categories': existing_categories,
         'predefined_categories': predefined_categories,
-        'latest_analysis': latest_analysis,
-        'total_experiences': Experience.objects.filter(user=request.user).count(),
     })
 
 @login_required

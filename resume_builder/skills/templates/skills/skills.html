@@ -1,12 +1,15 @@
 {% extends 'base.html' %}
 
-{% block title %}Skills & Analysis - Resume Builder{% endblock %}
+{% block title %}Skills - Resume Builder{% endblock %}
 
 {% block content %}
 <div class="container">
     <div class="header">
-        <h1>Skills & Expertise</h1>
+        <h1>Your Skills</h1>
         <p>Manage your professional skills and view analysis results</p>
+        <div class="header-actions">
+            <a href="{% url 'skills:add_skill' %}" class="btn btn-primary">Add New Skill</a>
+        </div>
     </div>
 
     {% if messages %}
@@ -314,122 +317,14 @@
                 {% if filter_form.search.value or filter_form.category.value or filter_form.skill_type.value or filter_form.skill_level.value %}
                     <p>No skills match your current filters. <a href="{% url 'skills:skills' %}">Clear filters</a> to see all skills.</p>
                 {% else %}
-                    <p>No skills added yet. Add your first skill below!</p>
+                    <div class="empty-state-content">
+                        <h3>No skills added yet</h3>
+                        <p>Start building your profile by adding your first skill!</p>
+                        <a href="{% url 'skills:add_skill' %}" class="btn btn-primary">Add Your First Skill</a>
+                    </div>
                 {% endif %}
             </div>
         {% endfor %}
-    </div>
-
-    <!-- Add New Skill Form (same as before) -->
-    <div class="form-section">
-        <h2>Add New Skill</h2>
-        
-        <form method="post" action="{% url 'skills:add_skill' %}">
-            {% csrf_token %}
-            
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.category.label_tag }}
-                    {{ form.category }}
-                    <datalist id="category-options">
-                        {% for category in predefined_categories %}
-                            <option value="{{ category }}">
-                        {% endfor %}
-                        {% for category in existing_categories %}
-                            {% if category not in predefined_categories %}
-                                <option value="{{ category }}">
-                            {% endif %}
-                        {% endfor %}
-                    </datalist>
-                    {% if form.category.help_text %}
-                        <small class="help-text">{{ form.category.help_text }}</small>
-                    {% endif %}
-                    {% if form.category.errors %}
-                        <div class="alert alert-error">{{ form.category.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.skill_type.label_tag }}
-                    {{ form.skill_type }}
-                    {% if form.skill_type.errors %}
-                        <div class="alert alert-error">{{ form.skill_type.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.title.label_tag }}
-                    {{ form.title }}
-                    {% if form.title.errors %}
-                        <div class="alert alert-error">{{ form.title.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.skill_level.label_tag }}
-                    {{ form.skill_level }}
-                    {% if form.skill_level.errors %}
-                        <div class="alert alert-error">{{ form.skill_level.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <div class="form-row">
-                <div class="form-group">
-                    {{ form.description.label_tag }}
-                    {{ form.description }}
-                    {% if form.description.errors %}
-                        <div class="alert alert-error">{{ form.description.errors }}</div>
-                    {% endif %}
-                </div>
-                <div class="form-group">
-                    {{ form.years_experience.label_tag }}
-                    {{ form.years_experience }}
-                    {% if form.years_experience.help_text %}
-                        <small class="help-text">{{ form.years_experience.help_text }}</small>
-                    {% endif %}
-                    {% if form.years_experience.errors %}
-                        <div class="alert alert-error">{{ form.years_experience.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            <!-- Skill Details Section -->
-            <div class="details-section">
-                <h3>Additional Details</h3>
-                
-                <div class="form-group">
-                    {{ form.certifications.label_tag }}
-                    {{ form.certifications }}
-                    {% if form.certifications.help_text %}
-                        <small class="help-text">{{ form.certifications.help_text }}</small>
-                    {% endif %}
-                    {% if form.certifications.errors %}
-                        <div class="alert alert-error">{{ form.certifications.errors }}</div>
-                    {% endif %}
-                </div>
-
-                <div class="form-group">
-                    {{ form.projects.label_tag }}
-                    {{ form.projects }}
-                    {% if form.projects.help_text %}
-                        <small class="help-text">{{ form.projects.help_text }}</small>
-                    {% endif %}
-                    {% if form.projects.errors %}
-                        <div class="alert alert-error">{{ form.projects.errors }}</div>
-                    {% endif %}
-                </div>
-            </div>
-
-            {% if form.non_field_errors %}
-                <div class="alert alert-error">{{ form.non_field_errors }}</div>
-            {% endif %}
-
-            <div class="actions">
-                <button type="submit" class="btn btn-primary">Add Skill</button>
-                <a href="{% url 'profile' %}" class="btn btn-secondary">Back to Profile</a>
-            </div>
-        </form>
     </div>
 </div>
 
@@ -524,6 +419,27 @@
 .summary-actions {
     display: flex;
     gap: 1rem;
+}
+
+/* Header styles */
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+}
+
+.header p {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    margin-top: 1rem;
 }
 
 /* Experience connection styles */
@@ -683,7 +599,7 @@
     justify-content: flex-end;
 }
 
-/* Existing styles from the original template... */
+/* Filter section */
 .filter-section {
     background: #f8f9fa;
     border: 1px solid #dee2e6;
@@ -930,13 +846,6 @@
     font-weight: 600;
 }
 
-.details-section h3 {
-    margin: 0 0 1rem 0;
-    color: #495057;
-    font-size: 1.1rem;
-    font-weight: 600;
-}
-
 .empty-state {
     text-align: center;
     padding: 2rem;
@@ -944,6 +853,15 @@
     background: #f8f9fa;
     border-radius: 8px;
     margin-bottom: 2rem;
+}
+
+.empty-state-content h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.empty-state-content p {
+    margin: 0 0 1.5rem 0;
 }
 
 .empty-state a {
@@ -973,41 +891,6 @@
     color: #721c24;
 }
 
-.form-section {
-    background: #fff;
-    padding: 2rem;
-    border-radius: 8px;
-    box-shadow: 0 2px 4px rgba(0,0,0,0.1);
-}
-
-.form-section h2 {
-    margin-top: 0;
-    margin-bottom: 1.5rem;
-    color: #333;
-}
-
-.actions {
-    display: flex;
-    gap: 1rem;
-    margin-top: 1.5rem;
-}
-
-.header {
-    margin-bottom: 2rem;
-    text-align: center;
-}
-
-.header h1 {
-    margin: 0 0 0.5rem 0;
-    color: #333;
-}
-
-.header p {
-    margin: 0;
-    color: #666;
-    font-size: 1.1rem;
-}
-
 .container {
     max-width: 1200px;
     margin: 0 auto;
@@ -1026,10 +909,6 @@
     }
     
     .card-actions-buttons {
-        flex-direction: column;
-    }
-    
-    .actions {
         flex-direction: column;
     }
     
@@ -1059,6 +938,10 @@
     .exp-meta {
         align-self: stretch;
         justify-content: flex-start;
+    }
+    
+    .header-actions {
+        margin-top: 1.5rem;
     }
 }
 </style>

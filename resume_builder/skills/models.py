@@ -40,6 +40,7 @@ class Skill(models.Model):
     SKILL_CATEGORIES = [
         ('Programming', 'Programming'),
         ('Communication', 'Communication'),
+        ('Technology', 'Technology'),
         ('Leadership', 'Leadership'),
         ('Design', 'Design'),
         ('Languages', 'Languages'),
