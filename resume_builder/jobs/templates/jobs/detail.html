@@ -122,7 +122,7 @@
 
     <!-- Navigation -->
     <div class="actions">
-        <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">Back to Job Details</a>
+        <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-secondary">Back to Job Details</a>
         <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">Add General Experience</a>
     </div>
 </div>
