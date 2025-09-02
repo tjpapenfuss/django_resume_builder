@@ -48,6 +48,17 @@
                 </div>
             </div>
         </div>
+        <!-- Button at the top near the header for interview prep -->
+        <div class="quick-actions-bar">
+            <a href="{% url 'jobs:job_interview_assistant' job.pk %}" class="interview-assistant-cta">
+                <div class="cta-icon">🎯</div>
+                <div class="cta-content">
+                    <h3>Prepare for Your Interview</h3>
+                    <p>See which of your experiences best demonstrate the skills they're looking for</p>
+                </div>
+                <div class="cta-arrow">→</div>
+            </a>
+        </div>
 
         <!-- Top Skills to Add -->
         <div class="skills-section">
@@ -120,9 +131,10 @@
         </div>
     {% endif %}
 
-    <!-- Navigation -->
+    <!-- Actions -->
     <div class="actions">
-        <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-secondary">Back to Job Details</a>
+        <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-primary">Extended Job Details</a>
+        <a href="{% url 'jobs:job_interview_assistant' job.pk %}" class="btn btn-primary">Interview Assistant</a>
         <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">Add General Experience</a>
     </div>
 </div>
@@ -434,6 +446,55 @@
     border-top: 1px solid #e9ecef;
     margin-top: 2rem;
 }
+.quick-actions-bar {
+    margin-bottom: 3rem;
+}
+
+.interview-assistant-cta {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    text-decoration: none;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    gap: 1.5rem;
+}
+
+.interview-assistant-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.cta-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.cta-content {
+    flex: 1;
+}
+
+.cta-content h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.cta-content p {
+    margin: 0;
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.cta-arrow {
+    font-size: 1.5rem;
+    opacity: 0.8;
+}
 
 /* Mobile Responsive */
 @media (max-width: 768px) {
@@ -501,6 +562,19 @@
     .nav-btn {
         padding: 0.4rem 0.8rem;
         font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .interview-assistant-cta {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .cta-arrow {
+        transform: rotate(90deg);
     }
 }
 </style>

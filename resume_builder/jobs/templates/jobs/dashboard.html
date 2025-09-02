@@ -79,6 +79,14 @@
                     <p>Update your work history</p>
                 </div>
             </a>
+
+            <a href="#" class="action-button secondary" onclick="showInterviewAssistantInfo()">
+                <div class="action-icon">🎯</div>
+                <div class="action-content">
+                    <h4>Interview Assistant</h4>
+                    <p>Prepare for interviews with your experiences</p>
+                </div>
+            </a>
             <!-- Need to add back in resume export later -->
 
         </div>
@@ -118,6 +126,9 @@
                             {% if application.job_posting.pk %}
                                 <a href="{% url 'jobs:job_detail' application.job_posting.pk %}" class="btn btn-sm btn-primary">
                                     View Details
+                                </a>
+                                <a href="{% url 'jobs:job_interview_assistant' application.job_posting.pk %}" class="btn btn-sm btn-secondary">
+                                    Interview Prep
                                 </a>
                             {% else %}
                                 <span class="btn btn-sm btn-secondary" style="opacity: 0.5; cursor: not-allowed;">
@@ -976,6 +987,12 @@
     }
 }
 </style>
+
+<script>
+function showInterviewAssistantInfo() {
+    alert('The Interview Assistant helps you prepare for interviews by showing which of your experiences best demonstrate the skills required for each job. Select a job from your Recent Jobs list to access Interview Assistant for that position.');
+}
+</script>
 
 <script>
 document.addEventListener('DOMContentLoaded', function() {

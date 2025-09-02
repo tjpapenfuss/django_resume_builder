@@ -112,7 +112,7 @@ def job_list(request):
     return render(request, 'jobs/list.html', context)
 
 @login_required
-def job_detail(request, pk):
+def skill_gap(request, pk):
     """Detailed view of a specific job posting with skill matching analysis"""
     job = get_object_or_404(JobPosting, pk=pk)
     
@@ -153,7 +153,7 @@ def job_detail(request, pk):
         'skill_match_analysis': skill_match_analysis,  # Add the skill analysis
     }
     
-    return render(request, 'jobs/detail.html', context)
+    return render(request, 'jobs/skill_gap.html', context)
 
 @login_required
 def job_detail_extended(request, pk):
@@ -246,7 +246,7 @@ def job_skill_gap_simple(request, pk):
         'skill_match_analysis': skill_match_analysis,
     }
     
-    return render(request, 'jobs/skill_gap_simple.html', context)
+    return render(request, 'jobs/skill_gap.html', context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -330,3 +330,124 @@ def dashboard(request):
     }
     
     return render(request, 'jobs/dashboard.html', context)
+
+# Add this to your jobs/views.py
+
+@login_required
+def job_interview_assistant(request, pk):
+    """Interview Assistant - Shows experiences that match job skills for interview prep"""
+    job = get_object_or_404(JobPosting, pk=pk)
+    
+    # Get or create application record for this user
+    application, created = JobApplication.objects.get_or_create(
+        user=request.user,
+        job_posting=job,
+        defaults={'status': 'saved'}
+    )
+    
+    try:
+        from experience.models import Experience
+        from skills.models import ExperienceSkill
+        
+        # Get job's required skills
+        job_skills = []
+        if job.ai_analysis:
+            job_skills.extend(job.ai_required_skills)
+            job_skills.extend(job.ai_preferred_skills)
+        else:
+            # Fallback to parsed requirements
+            job_skills.extend(job.required_skills)
+            job_skills.extend(job.preferred_skills)
+        
+        # Remove duplicates and clean up
+        job_skills = list(set([skill.strip() for skill in job_skills if skill.strip()]))
+        
+        # Find user's experiences that match these skills
+        matching_experiences = []
+        user_experiences = Experience.objects.filter(
+            user=request.user, 
+            visibility='public'
+        ).prefetch_related('skills', 'experienceskill_set__skill')
+        
+        for experience in user_experiences:
+            # Get all skills for this experience
+            experience_skills = experience.skills.values_list('title', flat=True)
+            
+            # Find matching skills (case-insensitive)
+            matching_skills = []
+            primary_skills = []
+            
+            for job_skill in job_skills:
+                for exp_skill_title in experience_skills:
+                    if job_skill.lower() in exp_skill_title.lower() or exp_skill_title.lower() in job_skill.lower():
+                        matching_skills.append(job_skill)
+                        
+                        # Check if this is a primary skill for this experience
+                        try:
+                            exp_skill_rel = ExperienceSkill.objects.get(
+                                experience=experience,
+                                skill__title=exp_skill_title
+                            )
+                            if exp_skill_rel.prominence == 'primary':
+                                primary_skills.append(job_skill)
+                        except ExperienceSkill.DoesNotExist:
+                            pass
+                        
+                        break  # Only match once per job skill
+            
+            # Only include experiences with at least 1 matching skill
+            if matching_skills:
+                matching_experiences.append({
+                    'experience': experience,
+                    'matching_skills': list(set(matching_skills)),  # Remove duplicates
+                    'primary_skills': list(set(primary_skills)),
+                    'skill_count': len(set(matching_skills)),
+                })
+        
+        # Sort by skill count (descending), then by primary skills count
+        matching_experiences.sort(
+            key=lambda x: (x['skill_count'], len(x['primary_skills'])), 
+            reverse=True
+        )
+        
+        # Calculate summary stats
+        total_skills_covered = len(set([
+            skill for exp in matching_experiences 
+            for skill in exp['matching_skills']
+        ]))
+        
+        multi_skill_experiences = len([
+            exp for exp in matching_experiences 
+            if exp['skill_count'] >= 2
+        ])
+        
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': matching_experiences,
+            'total_skills_covered': total_skills_covered,
+            'multi_skill_experiences': multi_skill_experiences,
+        }
+        
+    except ImportError:
+        # Handle case where models don't exist
+        messages.error(request, 'Experience and skills models not available')
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': [],
+            'total_skills_covered': 0,
+            'multi_skill_experiences': 0,
+        }
+    except Exception as e:
+        # Handle other errors gracefully
+        messages.error(request, f'Error loading interview data: {str(e)}')
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': [],
+            'total_skills_covered': 0,
+            'multi_skill_experiences': 0,
+        }
+    
+    return render(request, 'jobs/interview_assistant.html', context)
