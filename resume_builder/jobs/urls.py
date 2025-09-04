@@ -1,5 +1,6 @@
 from django.urls import path
 from . import views
+from experience.views import quick_add_experience
 
 app_name = 'jobs'
 
@@ -27,4 +28,7 @@ urlpatterns = [
 
     # Interview Assistant
     path('job/<uuid:pk>/interview-assistant/', views.job_interview_assistant, name='job_interview_assistant'),
+
+    path('<uuid:pk>/generate-experience-prompt/', views.generate_experience_prompt, name='generate_experience_prompt'),
+    path('<uuid:pk>/quick-add-experience/', quick_add_experience, name='quick_add_experience'),
 ]
