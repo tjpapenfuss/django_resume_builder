@@ -22,8 +22,10 @@ def experiences(request):
     filter_context = request.GET.get('context', 'all')  # all, employment, education, standalone
     search_query = request.GET.get('search', '')
 
-    # Start with all experiences for the logged-in user
-    experiences = Experience.objects.filter(user=request.user)
+    # Start with all experiences for the logged-in user, including linked skills
+    experiences = Experience.objects.filter(user=request.user).prefetch_related(
+        'experienceskill_set__skill'
+    )
 
     # Filter by type if not "all"
     if filter_type != 'all':
@@ -541,7 +543,7 @@ def update_experience(request, experience_id):
             })
         else:
             # Otherwise, reload page with form + errors
-            experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
+            experiences = Experience.objects.filter(user=request.user).prefetch_related('experienceskill_set__skill').order_by('-date_started', '-created_date')
             experience_types = Experience.EXPERIENCE_TYPES
 
             return render(request, 'list_experience.html', {

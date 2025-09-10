@@ -264,3 +264,9 @@ class Experience(models.Model):
             'company_name': details.get('company_name'),
             'skill_context': details.get('skill_context')
         }
+    
+    @property
+    def linked_skills(self):
+        """Get all skills linked to this experience through ExperienceSkill"""
+        from skills.models import ExperienceSkill
+        return [es.skill for es in self.experienceskill_set.all()]

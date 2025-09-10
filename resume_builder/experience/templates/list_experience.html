@@ -102,17 +102,17 @@
                             <p class="experience-description">{{ experience.description|truncatechars:120 }}</p>
                         {% endif %}
                         
-                        {% if experience.skills_used or experience.tags %}
+                        {% if experience.linked_skills %}
                             <div class="card-preview-details">
-                                {% if experience.skills_used %}
-                                    <span class="detail-chip">{{ experience.skills_used|length }} Skill{{ experience.skills_used|length|pluralize }}</span>
-                                {% endif %}
-                                {% if experience.tags %}
-                                    <span class="detail-chip">{{ experience.tags|length }} Tag{{ experience.tags|length|pluralize }}</span>
-                                {% endif %}
-                                {% if experience.details.outcomes %}
-                                    <span class="detail-chip">{{ experience.details.outcomes|length }} Outcome{{ experience.details.outcomes|length|pluralize }}</span>
-                                {% endif %}
+                                <span class="detail-chip">{{ experience.linked_skills|length }} Linked Skill{{ experience.linked_skills|length|pluralize }}</span>
+                                <div class="skill-preview">
+                                    {% for skill in experience.linked_skills|slice:":3" %}
+                                        <span class="skill-tag-small">{{ skill.title }}</span>
+                                    {% endfor %}
+                                    {% if experience.linked_skills|length > 3 %}
+                                        <span class="skill-tag-small more">+{{ experience.linked_skills|length|add:"-3" }} more</span>
+                                    {% endif %}
+                                </div>
                             </div>
                         {% endif %}
                     </div>
@@ -183,123 +183,23 @@
                                 </select>
                                 <small class="help-text">Optionally link this to education</small>
                             </div>
-                            <div class="form-group">
-                                <label for="visibility_{{ experience.experience_id }}">Visibility</label>
-                                <select id="visibility_{{ experience.experience_id }}" 
-                                        name="visibility" 
-                                        class="form-control">
-                                    <option value="public" {% if experience.visibility == 'public' %}selected{% endif %}>Include in Resumes</option>
-                                    <option value="private" {% if experience.visibility == 'private' %}selected{% endif %}>Personal Reference Only</option>
-                                    <option value="draft" {% if experience.visibility == 'draft' %}selected{% endif %}>Draft - Not Ready</option>
-                                </select>
-                            </div>
                         </div>
 
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="date_started_{{ experience.experience_id }}">Start Date</label>
-                                <input type="date" 
-                                       id="date_started_{{ experience.experience_id }}" 
-                                       name="date_started" 
-                                       class="form-control" 
-                                       value="{% if experience.date_started %}{{ experience.date_started|date:'Y-m-d' }}{% endif %}">
+                        <!-- Skills Section -->
+                        <div class="skills-section">
+                            <h4>Linked Skills</h4>
+                            <div class="skills-display">
+                                {% if experience.linked_skills %}
+                                    {% for skill in experience.linked_skills %}
+                                        <span class="skill-tag">{{ skill.title }}</span>
+                                    {% endfor %}
+                                {% else %}
+                                    <p class="no-skills">No skills linked to this experience yet.</p>
+                                {% endif %}
                             </div>
-                            <div class="form-group">
-                                <label for="date_finished_{{ experience.experience_id }}">End Date</label>
-                                <input type="date" 
-                                       id="date_finished_{{ experience.experience_id }}" 
-                                       name="date_finished" 
-                                       class="form-control" 
-                                       value="{% if experience.date_finished %}{{ experience.date_finished|date:'Y-m-d' }}{% endif %}">
-                                <small class="help-text">Leave blank if this is ongoing</small>
-                            </div>
-                        </div>
-
-                        <div class="form-row">
-                            <div class="form-group">
-                                <label for="skills_used_text_{{ experience.experience_id }}">Skills Used</label>
-                                <textarea id="skills_used_text_{{ experience.experience_id }}" 
-                                          name="skills_used_text" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="List relevant skills and technologies (one per line)">{% if experience.skills_used %}{{ experience.skills_used|join:"\n" }}{% endif %}</textarea>
-                                <small class="help-text">Skills developed or demonstrated</small>
-                            </div>
-                            <div class="form-group">
-                                <label for="tags_text_{{ experience.experience_id }}">Tags</label>
-                                <textarea id="tags_text_{{ experience.experience_id }}" 
-                                          name="tags_text" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="Tags for categorizing (e.g., data-engineering, leadership) - one per line">{% if experience.tags %}{{ experience.tags|join:"\n" }}{% endif %}</textarea>
-                                <small class="help-text">For filtering when generating targeted resumes</small>
-                            </div>
-                        </div>
-
-                        <!-- Details Section -->
-                        <div class="details-section">
-                            <h4>Additional Details</h4>
-                            
-                            <div class="form-group">
-                                <label for="outcomes_{{ experience.experience_id }}">Outcomes</label>
-                                <textarea id="outcomes_{{ experience.experience_id }}" 
-                                          name="outcomes" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="Describe the outcomes, results, or impact (one per line)">{% if experience.details.outcomes %}{{ experience.details.outcomes|join:"\n" }}{% endif %}</textarea>
-                                <small class="help-text">Quantifiable results, metrics, achievements</small>
-                            </div>
-
-                            <div class="form-group">
-                                <label for="challenges_{{ experience.experience_id }}">Challenges</label>
-                                <textarea id="challenges_{{ experience.experience_id }}" 
-                                          name="challenges" 
-                                          class="form-control" 
-                                          rows="3" 
-                                          placeholder="Key challenges faced and how they were overcome (one per line)">{% if experience.details.challenges %}{{ experience.details.challenges|join:"\n" }}{% endif %}</textarea>
-                                <small class="help-text">Problems solved, obstacles overcome</small>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="tools_used_{{ experience.experience_id }}">Tools Used</label>
-                                    <textarea id="tools_used_{{ experience.experience_id }}" 
-                                              name="tools_used" 
-                                              class="form-control" 
-                                              rows="2" 
-                                              placeholder="Specific tools, software, or technologies used (one per line)">{% if experience.details.tools_used %}{{ experience.details.tools_used|join:"\n" }}{% endif %}</textarea>
-                                    <small class="help-text">Specific software, frameworks, methodologies</small>
-                                </div>
-                                <div class="form-group">
-                                    <label for="links_{{ experience.experience_id }}">Links</label>
-                                    <textarea id="links_{{ experience.experience_id }}" 
-                                              name="links" 
-                                              class="form-control" 
-                                              rows="2" 
-                                              placeholder="Relevant links (GitHub, portfolio, etc.) - one per line">{% if experience.details.links %}{{ experience.details.links|join:"\n" }}{% endif %}</textarea>
-                                </div>
-                            </div>
-
-                            <div class="form-row">
-                                <div class="form-group">
-                                    <label for="team_size_{{ experience.experience_id }}">Team Size</label>
-                                    <input type="text" 
-                                           id="team_size_{{ experience.experience_id }}" 
-                                           name="team_size" 
-                                           class="form-control" 
-                                           value="{{ experience.details.team_size|default:'' }}" 
-                                           placeholder='e.g., "5 people" or "Solo project"'>
-                                </div>
-                                <div class="form-group">
-                                    <label for="budget_{{ experience.experience_id }}">Budget</label>
-                                    <input type="text" 
-                                           id="budget_{{ experience.experience_id }}" 
-                                           name="budget" 
-                                           class="form-control" 
-                                           value="{{ experience.details.budget|default:'' }}" 
-                                           placeholder='e.g., "$50,000" or "No budget"'>
-                                </div>
-                            </div>
+                            <a href="{% url 'experience:analyze_experience_skills' experience.experience_id %}" class="btn btn-sm btn-secondary">
+                                Analyze & Link Skills
+                            </a>
                         </div>
 
                         <div class="card-actions-buttons">
@@ -663,17 +563,65 @@
     font-weight: 500;
 }
 
-.details-section {
+/* Skills Section */
+.skills-section {
     margin-top: 1.5rem;
     padding-top: 1.5rem;
     border-top: 2px solid #e9ecef;
 }
 
-.details-section h4 {
+.skills-section h4 {
     margin: 0 0 1rem 0;
     color: #495057;
     font-size: 1.1rem;
     font-weight: 600;
+}
+
+.skills-display {
+    margin-bottom: 1rem;
+}
+
+.skill-tag {
+    display: inline-block;
+    background-color: #e3f2fd;
+    color: #1976d2;
+    padding: 0.4rem 0.8rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    margin: 0.2rem 0.4rem 0.2rem 0;
+    border: 1px solid #bbdefb;
+}
+
+.skill-tag-small {
+    display: inline-block;
+    background-color: #f0f8ff;
+    color: #1976d2;
+    padding: 0.2rem 0.5rem;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: 500;
+    margin: 0.1rem 0.2rem 0.1rem 0;
+    border: 1px solid #bbdefb;
+}
+
+.skill-tag-small.more {
+    background-color: #f5f5f5;
+    color: #666;
+    border-color: #ddd;
+}
+
+.skill-preview {
+    margin-top: 0.5rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.2rem;
+}
+
+.no-skills {
+    color: #666;
+    font-style: italic;
+    margin: 0;
 }
 
 .empty-state {
