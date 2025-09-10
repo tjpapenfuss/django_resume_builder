@@ -231,6 +231,7 @@ class ConversationManager:
             'conversation_id': str(conversation.conversation_id),
             'user_email': conversation.user.email,
             'status': conversation.status,
+            'title': conversation.title,
             'message_count': conversation.message_count,
             'created_at': conversation.created_at.isoformat(),
             'updated_at': conversation.updated_at.isoformat(),

@@ -96,6 +96,19 @@ class ConversationOrchestrator:
                 ai_metadata
             )
             
+            # Generate title after first user message (only if conversation doesn't have a title yet)
+            conversation_status = self.conversation_manager.get_conversation_status(conversation_id)
+            if not conversation_status.get('title'):
+                try:
+                    title = self.ai_service.generate_conversation_title(conversation_history)
+                    # Update conversation with title
+                    from ..models import Conversation
+                    conversation = Conversation.objects.get(conversation_id=conversation_id)
+                    conversation.title = title
+                    conversation.save(update_fields=['title', 'updated_at'])
+                except Exception as e:
+                    logger.warning(f"Failed to generate title for conversation {conversation_id}: {e}")
+            
             # Check if conversation should be completed
             should_complete, completion_reason = self.ai_service.detect_conversation_completion(
                 conversation_history + [{'role': 'assistant', 'content': ai_response}]

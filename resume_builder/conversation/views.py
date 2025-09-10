@@ -2,12 +2,14 @@
 Django views for conversation API endpoints
 """
 
-from django.shortcuts import render
+from django.shortcuts import render, redirect
 from django.http import JsonResponse
 from django.views.decorators.csrf import csrf_exempt
 from django.contrib.auth.decorators import login_required
 from django.utils.decorators import method_decorator
 from django.views import View
+from django.contrib import messages
+from django.urls import reverse
 from rest_framework import status
 from rest_framework.decorators import api_view, permission_classes
 from rest_framework.permissions import IsAuthenticated
@@ -305,3 +307,27 @@ def conversation_test_page(request):
     return render(request, 'conversation/test_conversation.html', {
         'user': request.user
     })
+
+
+@login_required
+def create_experience_from_conversation(request, conversation_id):
+    """
+    Redirect to add experience page with conversation ID
+    
+    GET /conversations/{conversation_id}/create-experience/
+    """
+    try:
+        # Verify conversation belongs to user
+        from .models import Conversation
+        conversation = Conversation.objects.get(
+            conversation_id=conversation_id, 
+            user=request.user
+        )
+        
+        # Redirect to add experience page with conversation_id parameter
+        add_experience_url = reverse('experience:add_experience')
+        return redirect(f"{add_experience_url}?conversation_id={conversation_id}")
+        
+    except Conversation.DoesNotExist:
+        messages.error(request, 'Conversation not found or access denied.')
+        return redirect('conversation:list_conversations')

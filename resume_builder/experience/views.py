@@ -71,31 +71,81 @@ def experiences(request):
 @login_required
 def add_experience(request):
     """Add new experience, with optional skill pre-population"""
+    # Initialize variables used in context
+    suggested_skill = request.GET.get('skill', '')
+    conversation_id = request.GET.get('conversation_id', '')
+    conversation_data = None
+    
     if request.method == 'POST':
         # Handle form submission (existing code)
         form = ExperienceForm(request.POST, user=request.user)
         if form.is_valid():
+            print("Found form")
             experience = form.save(commit=False)
             experience.user = request.user  # attach user to entry
+            
+            # Link to conversation if conversation_id is provided
+            conversation_id = request.POST.get('conversation_id', '')
+            if conversation_id:
+                try:
+                    from conversation.models import Conversation
+                    conversation = Conversation.objects.get(
+                        conversation_id=conversation_id, 
+                        user=request.user
+                    )
+                    experience.conversation = conversation
+                except Conversation.DoesNotExist:
+                    # If conversation doesn't exist or doesn't belong to user, ignore
+                    pass
+            print("found the saving. ")
             experience.save()
             
-            # Check if user wants AI analysis
-            analyze_with_ai = request.POST.get('analyze_with_ai') == 'on'
-            
-            if analyze_with_ai:
-                # Run AI analysis and redirect to skill confirmation page
-                return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
-            else:
-                messages.success(request, 'Experience entry added successfully!')
-                return redirect('experience:experience')
+            # Always run AI analysis and redirect to skill confirmation page
+            return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
+        else:
+            print('Form is not valid. ')
     else:
         # Pre-populate from URL parameters
         initial_data = {}
-        suggested_skill = request.GET.get('skill', '')  # Note: changed from 'suggested_skill'
         
-        if suggested_skill:
-            initial_data['skills_used_text'] = suggested_skill
-            initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
+        # Note: suggested_skill is kept for context but no longer auto-fills form fields
+        
+        # If conversation_id is provided, try to get conversation data for auto-filling
+        if conversation_id:
+            try:
+                from conversation.models import Conversation
+                conversation = Conversation.objects.get(
+                    conversation_id=conversation_id,
+                    user=request.user,
+                    status='completed'  # Only use completed conversations
+                )
+                
+                if conversation.experience_summary:
+                    # Try to parse the summary if it's JSON
+                    import json
+                    try:
+                        summary_data = json.loads(conversation.experience_summary)
+                        conversation_data = {
+                            'title': conversation.title or summary_data.get('role_context', ''),
+                            'summary': summary_data
+                        }
+                        
+                        # Auto-fill form fields from conversation data
+                        initial_data['title'] = conversation.title or summary_data.get('role_context', '')
+                        initial_data['description'] = summary_data.get('narrative_summary', '')
+                        
+                    except json.JSONDecodeError:
+                        # If it's not JSON, use as plain text
+                        conversation_data = {
+                            'title': conversation.title or 'Experience from Conversation',
+                            'summary': {'narrative_summary': conversation.experience_summary}
+                        }
+                        initial_data['title'] = conversation.title or 'Experience from Conversation'
+                        initial_data['description'] = conversation.experience_summary
+                        
+            except Conversation.DoesNotExist:
+                # Conversation doesn't exist or doesn't belong to user
+                pass
         
         form = ExperienceForm(initial=initial_data, user=request.user)
     
@@ -103,6 +153,9 @@ def add_experience(request):
         'form': form,
         'suggested_skill': suggested_skill,
         'from_skill_analysis': bool(suggested_skill),
+        'conversation_id': conversation_id,
+        'from_conversation': bool(conversation_id),
+        'conversation_data': conversation_data,
     }
     
     return render(request, 'add_experience.html', context)

@@ -106,6 +106,7 @@
         .pause-btn { background-color: #ffc107; color: #333; }
         .complete-btn { background-color: #17a2b8; color: white; }
         .status-btn { background-color: #6c757d; color: white; }
+        .experience-btn { background-color: #ffa1fa; color: white; }
         
         .status-info {
             background-color: #e3f2fd;
@@ -155,6 +156,7 @@
             <button class="control-btn start-btn" onclick="startNewConversation()">Start New Conversation</button>
             <button class="control-btn pause-btn" onclick="pauseConversation()" disabled>Pause</button>
             <button class="control-btn complete-btn" onclick="completeConversation()" disabled>Complete</button>
+            <button class="control-btn experience-btn" onclick="createExperience()" disabled>Create Experience</button>
             <button class="control-btn status-btn" onclick="getStatus()" disabled>Get Status</button>
         </div>
         
@@ -266,6 +268,7 @@
                     document.getElementById('send-btn').disabled = false;
                     document.querySelector('.pause-btn').disabled = false;
                     document.querySelector('.complete-btn').disabled = false;
+                    document.querySelector('.experience-btn').disabled = false;
                     document.querySelector('.status-btn').disabled = false;
                     
                     updateStatus({
@@ -368,6 +371,7 @@
                     document.getElementById('send-btn').disabled = true;
                     document.querySelector('.pause-btn').disabled = true;
                     document.querySelector('.complete-btn').disabled = true;
+                    document.querySelector('.experience-btn').disabled = true;
                     
                     updateStatus({
                         status: 'completed',
@@ -428,6 +432,49 @@
                 }
             } catch (error) {
                 showError('Failed to get status: ' + error.message);
+            }
+        }
+        
+        async function createExperience() {
+            if (!currentConversationId) {
+                showError('No active conversation to create experience from');
+                return;
+            }
+            
+            try {
+                // First, complete the conversation to get the final summary
+                displayMessage('assistant', '⏳ Completing conversation and generating experience summary...');
+                
+                const completeResponse = await fetch(`/conversations/${currentConversationId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ user_approved: true })
+                });
+                
+                const completeData = await completeResponse.json();
+                
+                if (completeData.success) {
+                    displayMessage('assistant', '✅ Conversation completed! Redirecting to create experience...');
+                    
+                    // Disable controls
+                    document.getElementById('user-message').disabled = true;
+                    document.getElementById('send-btn').disabled = true;
+                    document.querySelector('.pause-btn').disabled = true;
+                    document.querySelector('.complete-btn').disabled = true;
+                    document.querySelector('.experience-btn').disabled = true;
+                    
+                    // Short delay then redirect to create experience page
+                    setTimeout(() => {
+                        window.location.href = `/conversations/${currentConversationId}/create-experience/`;
+                    }, 1500);
+                } else {
+                    showError('Failed to complete conversation: ' + completeData.error);
+                }
+            } catch (error) {
+                showError('Failed to complete conversation: ' + error.message);
             }
         }
         

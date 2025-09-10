@@ -15,6 +15,7 @@ urlpatterns = [
     path('<uuid:conversation_id>/complete/', views.complete_conversation, name='complete_conversation'),
     path('<uuid:conversation_id>/status/', views.get_conversation_status, name='get_status'),
     path('<uuid:conversation_id>/pause/', views.pause_conversation, name='pause_conversation'),
+    path('<uuid:conversation_id>/create-experience/', views.create_experience_from_conversation, name='create_experience'),
     path('', views.list_user_conversations, name='list_conversations'),
     
     # Test page

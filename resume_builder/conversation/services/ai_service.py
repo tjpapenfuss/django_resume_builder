@@ -193,6 +193,7 @@ Remember: Your goal is to help users recognize and articulate the full value of 
         summary_prompt = """Based on our conversation, please provide a comprehensive summary of this professional experience in the following JSON format:
 
 {
+  "title": "Concise experience title (e.g., 'Software Engineer at TechCorp')",
   "narrative_summary": "A detailed paragraph describing the full experience",
   "resume_bullets": [
     "Bullet point 1 with specific impact/outcome",
@@ -245,6 +246,48 @@ Please ensure all content is specific, quantifiable where possible, and professi
                 "fallback_summary": "Failed to generate AI summary. Please review conversation manually."
             }
     
+    def generate_conversation_title(self, conversation_messages: List[Dict]) -> str:
+        """
+        Generates a concise title for the conversation based on the first user message
+        
+        Args:
+            conversation_messages: Current conversation history
+            
+        Returns:
+            String title for the conversation
+        """
+        title_prompt = """Based on this conversation about a professional experience, create a concise, descriptive title (max 50 characters) that captures the main topic.
+
+Examples:
+- "Software Engineer at TechCorp"
+- "Project Manager - Mobile App Launch"
+- "Data Analysis Internship"
+- "Marketing Campaign Lead Role"
+
+Make it clear and professional, focusing on the role or main responsibility discussed.
+
+Respond with just the title, no additional text."""
+
+        messages_for_title = conversation_messages + [
+            {"role": "user", "content": title_prompt}
+        ]
+        
+        try:
+            response_content, _ = self.generate_ai_response(messages_for_title, use_anthropic=True)
+            # Clean up the response - remove quotes and extra whitespace
+            title = response_content.strip().strip('"\'').strip()
+            
+            # Ensure title is not too long
+            if len(title) > 50:
+                title = title[:47] + "..."
+                
+            return title
+            
+        except Exception as e:
+            logger.warning(f"Failed to generate conversation title: {e}")
+            # Fallback title
+            return "Professional Experience Discussion"
+
     def detect_conversation_completion(self, conversation_messages: List[Dict]) -> Tuple[bool, str]:
         """
         Analyzes conversation to determine if enough detail has been gathered

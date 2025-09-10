@@ -37,6 +37,9 @@ class Experience(models.Model):
     # Optional links to employment or education records
     employment = models.ForeignKey("employment.Employment", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
     education = models.ForeignKey("education.Education", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
+    
+    # Optional link to conversation that generated this experience
+    conversation = models.ForeignKey("conversation.Conversation", on_delete=models.SET_NULL, related_name="experiences", null=True, blank=True)
 
     # Timeframe of the experience
     date_started = models.DateField(null=True, blank=True)
@@ -71,6 +74,7 @@ class Experience(models.Model):
             models.Index(fields=['user', 'experience_type']),
             models.Index(fields=['employment']),
             models.Index(fields=['education']),
+            models.Index(fields=['conversation']),
         ]
         db_table = "experience"   
 

@@ -16,6 +16,7 @@ class Conversation(models.Model):
     conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
     user = models.ForeignKey(settings.AUTH_USER_MODEL, on_delete=models.CASCADE, related_name='conversations')
     status = models.CharField(max_length=20, choices=STATUS_CHOICES, default='active')
+    title = models.CharField(max_length=200, blank=True, null=True, help_text="Auto-generated title based on conversation content")
     experience_summary = models.TextField(blank=True, null=True, help_text="Summary of extracted experience information")
     
     created_at = models.DateTimeField(auto_now_add=True)
