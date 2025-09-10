@@ -1,0 +1,489 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Experience Extraction Conversation - Test</title>
+    <style>
+        body {
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+            max-width: 800px;
+            margin: 0 auto;
+            padding: 20px;
+            background-color: #f5f5f5;
+        }
+        
+        .chat-container {
+            background: white;
+            border-radius: 10px;
+            padding: 20px;
+            box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+            min-height: 500px;
+        }
+        
+        .chat-header {
+            border-bottom: 2px solid #e0e0e0;
+            padding-bottom: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .chat-messages {
+            height: 400px;
+            overflow-y: auto;
+            border: 1px solid #e0e0e0;
+            border-radius: 5px;
+            padding: 10px;
+            margin-bottom: 20px;
+            background-color: #fafafa;
+        }
+        
+        .message {
+            margin-bottom: 15px;
+            padding: 10px;
+            border-radius: 8px;
+            max-width: 80%;
+        }
+        
+        .user-message {
+            background-color: #007bff;
+            color: white;
+            margin-left: auto;
+            text-align: right;
+        }
+        
+        .assistant-message {
+            background-color: #e9ecef;
+            color: #333;
+        }
+        
+        .message-input {
+            display: flex;
+            gap: 10px;
+        }
+        
+        .message-input input[type="text"] {
+            flex: 1;
+            padding: 10px;
+            border: 1px solid #ccc;
+            border-radius: 5px;
+            font-size: 16px;
+        }
+        
+        .message-input button {
+            background-color: #007bff;
+            color: white;
+            border: none;
+            padding: 10px 20px;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+        }
+        
+        .message-input button:hover {
+            background-color: #0056b3;
+        }
+        
+        .message-input button:disabled {
+            background-color: #6c757d;
+            cursor: not-allowed;
+        }
+        
+        .conversation-controls {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 20px;
+        }
+        
+        .control-btn {
+            padding: 8px 16px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 14px;
+        }
+        
+        .start-btn { background-color: #28a745; color: white; }
+        .pause-btn { background-color: #ffc107; color: #333; }
+        .complete-btn { background-color: #17a2b8; color: white; }
+        .status-btn { background-color: #6c757d; color: white; }
+        .experience-btn { background-color: #ffa1fa; color: white; }
+        
+        .status-info {
+            background-color: #e3f2fd;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .loading {
+            font-style: italic;
+            color: #666;
+        }
+        
+        .error {
+            background-color: #f8d7da;
+            color: #721c24;
+            padding: 10px;
+            border-radius: 5px;
+            margin-bottom: 10px;
+        }
+        
+        .completion-suggestion {
+            background-color: #d1ecf1;
+            border: 1px solid #b6d4d6;
+            border-radius: 5px;
+            padding: 15px;
+            margin: 10px 0;
+        }
+        
+        .summary-preview {
+            background-color: #f8f9fa;
+            border-left: 4px solid #007bff;
+            padding: 10px;
+            margin: 10px 0;
+            font-size: 14px;
+        }
+    </style>
+</head>
+<body>
+    <div class="chat-container">
+        <div class="chat-header">
+            <h1>Experience Extraction Conversation</h1>
+            <p>Welcome, {{ user.email }}! Start a conversation to extract detailed information about your professional experiences.</p>
+        </div>
+        
+        <div class="conversation-controls">
+            <button class="control-btn start-btn" onclick="startNewConversation()">Start New Conversation</button>
+            <button class="control-btn pause-btn" onclick="pauseConversation()" disabled>Pause</button>
+            <button class="control-btn complete-btn" onclick="completeConversation()" disabled>Complete</button>
+            <button class="control-btn experience-btn" onclick="createExperience()" disabled>Create Experience</button>
+            <button class="control-btn status-btn" onclick="getStatus()" disabled>Get Status</button>
+        </div>
+        
+        <div id="status-info" class="status-info" style="display: none;"></div>
+        <div id="completion-suggestion" class="completion-suggestion" style="display: none;"></div>
+        
+        <div id="chat-messages" class="chat-messages"></div>
+        
+        <div class="message-input">
+            <input type="text" id="user-message" placeholder="Type your message here..." disabled>
+            <button id="send-btn" onclick="sendMessage()" disabled>Send</button>
+        </div>
+    </div>
+
+    <script>
+        let currentConversationId = null;
+        let conversationStatus = null;
+        
+        // Get CSRF token for Django
+        function getCookie(name) {
+            let cookieValue = null;
+            if (document.cookie && document.cookie !== '') {
+                const cookies = document.cookie.split(';');
+                for (let i = 0; i < cookies.length; i++) {
+                    const cookie = cookies[i].trim();
+                    if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                        cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                        break;
+                    }
+                }
+            }
+            return cookieValue;
+        }
+        
+        const csrfToken = getCookie('csrftoken');
+        
+        function displayMessage(role, content, timestamp = null) {
+            const messagesContainer = document.getElementById('chat-messages');
+            const messageDiv = document.createElement('div');
+            messageDiv.className = `message ${role}-message`;
+            
+            let timeStr = '';
+            if (timestamp) {
+                const time = new Date(timestamp).toLocaleTimeString();
+                timeStr = ` <small>(${time})</small>`;
+            }
+            
+            messageDiv.innerHTML = `${content}${timeStr}`;
+            messagesContainer.appendChild(messageDiv);
+            messagesContainer.scrollTop = messagesContainer.scrollHeight;
+        }
+        
+        function showError(message) {
+            const errorDiv = document.createElement('div');
+            errorDiv.className = 'error';
+            errorDiv.textContent = 'Error: ' + message;
+            document.getElementById('chat-messages').appendChild(errorDiv);
+        }
+        
+        function updateStatus(info) {
+            const statusDiv = document.getElementById('status-info');
+            statusDiv.innerHTML = `
+                <strong>Conversation Status:</strong> ${info.status} | 
+                <strong>Messages:</strong> ${info.message_count} | 
+                <strong>Last Update:</strong> ${new Date(info.updated_at).toLocaleString()}
+            `;
+            statusDiv.style.display = 'block';
+        }
+        
+        function showCompletionSuggestion(suggestion) {
+            if (!suggestion.suggested) return;
+            
+            const suggestionDiv = document.getElementById('completion-suggestion');
+            suggestionDiv.innerHTML = `
+                <h4>💡 Ready to Complete?</h4>
+                <p><strong>Reason:</strong> ${suggestion.reason}</p>
+                <button onclick="completeConversation()" class="control-btn complete-btn">
+                    Complete Conversation
+                </button>
+            `;
+            suggestionDiv.style.display = 'block';
+        }
+        
+        async function startNewConversation() {
+            try {
+                const response = await fetch('/conversations/start/', {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    }
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    currentConversationId = data.conversation_id;
+                    conversationStatus = 'active';
+                    
+                    // Clear previous messages
+                    document.getElementById('chat-messages').innerHTML = '';
+                    document.getElementById('completion-suggestion').style.display = 'none';
+                    
+                    // Display initial AI message
+                    displayMessage('assistant', data.initial_message);
+                    
+                    // Enable controls
+                    document.getElementById('user-message').disabled = false;
+                    document.getElementById('send-btn').disabled = false;
+                    document.querySelector('.pause-btn').disabled = false;
+                    document.querySelector('.complete-btn').disabled = false;
+                    document.querySelector('.experience-btn').disabled = false;
+                    document.querySelector('.status-btn').disabled = false;
+                    
+                    updateStatus({
+                        status: 'active',
+                        message_count: 1,
+                        updated_at: new Date().toISOString()
+                    });
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                showError('Failed to start conversation: ' + error.message);
+            }
+        }
+        
+        async function sendMessage() {
+            if (!currentConversationId) return;
+            
+            const messageInput = document.getElementById('user-message');
+            const message = messageInput.value.trim();
+            
+            if (!message) return;
+            
+            // Display user message immediately
+            displayMessage('user', message);
+            messageInput.value = '';
+            
+            // Disable send button while processing
+            document.getElementById('send-btn').disabled = true;
+            displayMessage('assistant', 'Thinking...', null);
+            
+            try {
+                const response = await fetch(`/conversations/${currentConversationId}/message/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ content: message })
+                });
+                
+                const data = await response.json();
+                
+                // Remove "Thinking..." message
+                const messages = document.getElementById('chat-messages');
+                messages.removeChild(messages.lastChild);
+                
+                if (data.success) {
+                    // Display AI response
+                    displayMessage('assistant', data.ai_response);
+                    
+                    // Check for completion suggestion
+                    if (data.completion_suggestion) {
+                        showCompletionSuggestion(data.completion_suggestion);
+                    }
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                // Remove "Thinking..." message
+                const messages = document.getElementById('chat-messages');
+                messages.removeChild(messages.lastChild);
+                showError('Failed to send message: ' + error.message);
+            }
+            
+            // Re-enable send button
+            document.getElementById('send-btn').disabled = false;
+        }
+        
+        async function completeConversation() {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/conversations/${currentConversationId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ user_approved: true })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayMessage('assistant', '✅ Conversation completed! Here\'s your experience summary:');
+                    
+                    if (data.experience_summary.narrative_summary) {
+                        const summaryDiv = document.createElement('div');
+                        summaryDiv.className = 'summary-preview';
+                        summaryDiv.innerHTML = `
+                            <h4>Experience Summary:</h4>
+                            <p>${data.experience_summary.narrative_summary}</p>
+                        `;
+                        document.getElementById('chat-messages').appendChild(summaryDiv);
+                    }
+                    
+                    // Disable controls
+                    document.getElementById('user-message').disabled = true;
+                    document.getElementById('send-btn').disabled = true;
+                    document.querySelector('.pause-btn').disabled = true;
+                    document.querySelector('.complete-btn').disabled = true;
+                    document.querySelector('.experience-btn').disabled = true;
+                    
+                    updateStatus({
+                        status: 'completed',
+                        message_count: 'Final',
+                        updated_at: new Date().toISOString()
+                    });
+                    
+                    document.getElementById('completion-suggestion').style.display = 'none';
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                showError('Failed to complete conversation: ' + error.message);
+            }
+        }
+        
+        async function pauseConversation() {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/conversations/${currentConversationId}/pause/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ action: 'pause' })
+                });
+                
+                const data = await response.json();
+                
+                if (data.success) {
+                    displayMessage('assistant', '⏸️ Conversation paused. You can resume anytime by sending a new message.');
+                    updateStatus({
+                        status: 'paused',
+                        message_count: 'Paused',
+                        updated_at: new Date().toISOString()
+                    });
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                showError('Failed to pause conversation: ' + error.message);
+            }
+        }
+        
+        async function getStatus() {
+            if (!currentConversationId) return;
+            
+            try {
+                const response = await fetch(`/conversations/${currentConversationId}/status/`);
+                const data = await response.json();
+                
+                if (data.success) {
+                    updateStatus(data.conversation);
+                } else {
+                    showError(data.error);
+                }
+            } catch (error) {
+                showError('Failed to get status: ' + error.message);
+            }
+        }
+        
+        async function createExperience() {
+            if (!currentConversationId) {
+                showError('No active conversation to create experience from');
+                return;
+            }
+            
+            try {
+                // First, complete the conversation to get the final summary
+                displayMessage('assistant', '⏳ Completing conversation and generating experience summary...');
+                
+                const completeResponse = await fetch(`/conversations/${currentConversationId}/complete/`, {
+                    method: 'POST',
+                    headers: {
+                        'Content-Type': 'application/json',
+                        'X-CSRFToken': csrfToken
+                    },
+                    body: JSON.stringify({ user_approved: true })
+                });
+                
+                const completeData = await completeResponse.json();
+                
+                if (completeData.success) {
+                    displayMessage('assistant', '✅ Conversation completed! Redirecting to create experience...');
+                    
+                    // Disable controls
+                    document.getElementById('user-message').disabled = true;
+                    document.getElementById('send-btn').disabled = true;
+                    document.querySelector('.pause-btn').disabled = true;
+                    document.querySelector('.complete-btn').disabled = true;
+                    document.querySelector('.experience-btn').disabled = true;
+                    
+                    // Short delay then redirect to create experience page
+                    setTimeout(() => {
+                        window.location.href = `/conversations/${currentConversationId}/create-experience/`;
+                    }, 1500);
+                } else {
+                    showError('Failed to complete conversation: ' + completeData.error);
+                }
+            } catch (error) {
+                showError('Failed to complete conversation: ' + error.message);
+            }
+        }
+        
+        // Handle Enter key in message input
+        document.getElementById('user-message').addEventListener('keypress', function(event) {
+            if (event.key === 'Enter') {
+                sendMessage();
+            }
+        });
+    </script>
+</body>
+</html>

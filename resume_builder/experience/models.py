@@ -37,6 +37,9 @@ class Experience(models.Model):
     # Optional links to employment or education records
     employment = models.ForeignKey("employment.Employment", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
     education = models.ForeignKey("education.Education", on_delete=models.CASCADE, related_name="experiences", null=True, blank=True)
+    
+    # Optional link to conversation that generated this experience
+    conversation = models.ForeignKey("conversation.Conversation", on_delete=models.SET_NULL, related_name="experiences", null=True, blank=True)
 
     # Timeframe of the experience
     date_started = models.DateField(null=True, blank=True)
@@ -71,6 +74,7 @@ class Experience(models.Model):
             models.Index(fields=['user', 'experience_type']),
             models.Index(fields=['employment']),
             models.Index(fields=['education']),
+            models.Index(fields=['conversation']),
         ]
         db_table = "experience"   
 
@@ -121,8 +125,6 @@ class Experience(models.Model):
         """
         return self.date_started and not self.date_finished
     
-    # ... rest of existing model ...
-
     def add_skill(self, skill, prominence='secondary', proficiency=None, usage_notes='', method='manual'):
         """Helper method to add a skill to this experience"""
         from skills.models import ExperienceSkill
@@ -194,3 +196,77 @@ class Experience(models.Model):
         
         return experiences
 
+    def link_to_job(self, job_posting, target_skills=None, relevance='manually_linked', notes=''):
+        """Link this experience to a specific job posting"""
+        from jobs.models import JobExperience  # Adjust import path as needed
+        
+        job_exp, created = JobExperience.objects.get_or_create(
+            job_posting=job_posting,
+            experience=self,
+            user=self.user,
+            defaults={
+                'relevance': relevance,
+                'target_skills': target_skills or [],
+                'creation_source': 'manual_link',
+                'relevance_notes': notes
+            }
+        )
+        
+        if not created and target_skills:
+            # Update existing link with new target skills
+            current_skills = job_exp.target_skills or []
+            job_exp.target_skills = list(set(current_skills + target_skills))
+            job_exp.save()
+        
+        return job_exp
+
+    def get_linked_jobs(self):
+        """Get all jobs this experience is linked to"""
+        from jobs.models import JobExperience
+        return JobExperience.objects.filter(experience=self).select_related('job_posting')
+
+    def get_job_relevance_score(self, job_posting):
+        """Get how relevant this experience is to a specific job"""
+        from jobs.models import JobExperience
+        try:
+            job_exp = JobExperience.objects.get(
+                job_posting=job_posting,
+                experience=self
+            )
+            return job_exp.match_score or 0
+        except JobExperience.DoesNotExist:
+            return 0
+
+    def is_created_for_job(self, job_posting):
+        """Check if this experience was created specifically for a job"""
+        from jobs.models import JobExperience
+        return JobExperience.objects.filter(
+            job_posting=job_posting,
+            experience=self,
+            relevance='created_for'
+        ).exists()
+
+    @property
+    def was_quick_added(self):
+        """Check if this experience was created via quick add modal"""
+        return self.details and self.details.get('source') == 'quick_add_modal'
+
+    @property
+    def target_job_info(self):
+        """Get information about the job this experience was created for (if any)"""
+        if not self.was_quick_added:
+            return None
+        
+        details = self.details or {}
+        return {
+            'job_id': details.get('job_posting_id'),
+            'job_title': details.get('job_title'),
+            'company_name': details.get('company_name'),
+            'skill_context': details.get('skill_context')
+        }
+    
+    @property
+    def linked_skills(self):
+        """Get all skills linked to this experience through ExperienceSkill"""
+        from skills.models import ExperienceSkill
+        return [es.skill for es in self.experienceskill_set.all()]

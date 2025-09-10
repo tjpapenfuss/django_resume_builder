@@ -10,6 +10,7 @@ from .services.job_scraper import JobDescriptionScraper
 from .services.ai_analyzer import analyze_job_with_ai
 from django.views.decorators.http import require_http_methods
 import json
+from datetime import timezone
 
 @login_required
 def add_job_from_url(request):
@@ -112,7 +113,7 @@ def job_list(request):
     return render(request, 'jobs/list.html', context)
 
 @login_required
-def job_detail(request, pk):
+def skill_gap(request, pk):
     """Detailed view of a specific job posting with skill matching analysis"""
     job = get_object_or_404(JobPosting, pk=pk)
     
@@ -153,7 +154,7 @@ def job_detail(request, pk):
         'skill_match_analysis': skill_match_analysis,  # Add the skill analysis
     }
     
-    return render(request, 'jobs/detail.html', context)
+    return render(request, 'jobs/skill_gap.html', context)
 
 @login_required
 def job_detail_extended(request, pk):
@@ -246,7 +247,7 @@ def job_skill_gap_simple(request, pk):
         'skill_match_analysis': skill_match_analysis,
     }
     
-    return render(request, 'jobs/skill_gap_simple.html', context)
+    return render(request, 'jobs/skill_gap.html', context)
 
 @login_required
 @require_http_methods(["POST"])
@@ -330,3 +331,372 @@ def dashboard(request):
     }
     
     return render(request, 'jobs/dashboard.html', context)
+
+# Add this to your jobs/views.py
+
+@login_required
+def job_interview_assistant(request, pk):
+    """Interview Assistant - Shows experiences that match job skills for interview prep"""
+    job = get_object_or_404(JobPosting, pk=pk)
+    
+    # Get or create application record for this user
+    application, created = JobApplication.objects.get_or_create(
+        user=request.user,
+        job_posting=job,
+        defaults={'status': 'saved'}
+    )
+    
+    try:
+        from experience.models import Experience
+        from skills.models import ExperienceSkill
+        
+        # Get job's required skills
+        job_skills = []
+        if job.ai_analysis:
+            job_skills.extend(job.ai_required_skills)
+            job_skills.extend(job.ai_preferred_skills)
+        else:
+            # Fallback to parsed requirements
+            job_skills.extend(job.required_skills)
+            job_skills.extend(job.preferred_skills)
+        
+        # Remove duplicates and clean up
+        job_skills = list(set([skill.strip() for skill in job_skills if skill.strip()]))
+        
+        # Find user's experiences that match these skills
+        matching_experiences = []
+        user_experiences = Experience.objects.filter(
+            user=request.user, 
+            visibility='public'
+        ).prefetch_related('skills', 'experienceskill_set__skill')
+        
+        for experience in user_experiences:
+            # Get all skills for this experience
+            experience_skills = experience.skills.values_list('title', flat=True)
+            
+            # Find matching skills (case-insensitive)
+            matching_skills = []
+            primary_skills = []
+            
+            for job_skill in job_skills:
+                for exp_skill_title in experience_skills:
+                    if job_skill.lower() in exp_skill_title.lower() or exp_skill_title.lower() in job_skill.lower():
+                        matching_skills.append(job_skill)
+                        
+                        # Check if this is a primary skill for this experience
+                        try:
+                            exp_skill_rel = ExperienceSkill.objects.get(
+                                experience=experience,
+                                skill__title=exp_skill_title
+                            )
+                            if exp_skill_rel.prominence == 'primary':
+                                primary_skills.append(job_skill)
+                        except ExperienceSkill.DoesNotExist:
+                            pass
+                        
+                        break  # Only match once per job skill
+            
+            # Only include experiences with at least 1 matching skill
+            if matching_skills:
+                matching_experiences.append({
+                    'experience': experience,
+                    'matching_skills': list(set(matching_skills)),  # Remove duplicates
+                    'primary_skills': list(set(primary_skills)),
+                    'skill_count': len(set(matching_skills)),
+                })
+        
+        # Sort by skill count (descending), then by primary skills count
+        matching_experiences.sort(
+            key=lambda x: (x['skill_count'], len(x['primary_skills'])), 
+            reverse=True
+        )
+        
+        # Calculate summary stats
+        total_skills_covered = len(set([
+            skill for exp in matching_experiences 
+            for skill in exp['matching_skills']
+        ]))
+        
+        multi_skill_experiences = len([
+            exp for exp in matching_experiences 
+            if exp['skill_count'] >= 2
+        ])
+        
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': matching_experiences,
+            'total_skills_covered': total_skills_covered,
+            'multi_skill_experiences': multi_skill_experiences,
+        }
+        
+    except ImportError:
+        # Handle case where models don't exist
+        messages.error(request, 'Experience and skills models not available')
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': [],
+            'total_skills_covered': 0,
+            'multi_skill_experiences': 0,
+        }
+    except Exception as e:
+        # Handle other errors gracefully
+        messages.error(request, f'Error loading interview data: {str(e)}')
+        context = {
+            'job': job,
+            'application': application,
+            'interview_experiences': [],
+            'total_skills_covered': 0,
+            'multi_skill_experiences': 0,
+        }
+    
+    return render(request, 'jobs/interview_assistant.html', context)
+
+# Add these imports to your jobs/views.py file
+from django.views.decorators.csrf import csrf_exempt
+from django.utils.decorators import method_decorator
+import json
+from django.conf import settings
+
+# Add these new view functions to your jobs/views.py file
+
+@login_required
+@require_http_methods(["POST"])
+def generate_experience_prompt(request, pk):
+    """Generate AI prompt for experience based on job description and skill"""
+    try:
+        job = get_object_or_404(JobPosting, pk=pk)
+        
+        # Ensure user has access to this job
+        application = JobApplication.objects.filter(
+            user=request.user, 
+            job_posting=job
+        ).first()
+        
+        if not application:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have access to this job'
+            }, status=403)
+        
+        # Parse request data
+        data = json.loads(request.body)
+        skill_name = data.get('skill_name', '').strip()
+        
+        if not skill_name:
+            return JsonResponse({
+                'success': False,
+                'message': 'Skill name is required'
+            }, status=400)
+        
+        # Generate AI prompt
+        from jobs.services.experience_prompt_generator import ExperiencePromptGenerator
+        generator = ExperiencePromptGenerator(job, skill_name)
+        prompt = generator.generate_prompt()
+        
+        if prompt:
+            return JsonResponse({
+                'success': True,
+                'prompt': prompt,
+                'skill_name': skill_name
+            })
+        else:
+            # Fallback to generic prompt if AI fails
+            fallback_prompt = generate_fallback_prompt(skill_name, job)
+            return JsonResponse({
+                'success': True,
+                'prompt': fallback_prompt,
+                'skill_name': skill_name
+            })
+            
+    except json.JSONDecodeError:
+        return JsonResponse({
+            'success': False,
+            'message': 'Invalid JSON data'
+        }, status=400)
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error generating prompt: {str(e)}'
+        }, status=500)
+
+
+# @login_required
+# @require_http_methods(["POST"])
+# def quick_add_experience(request, pk):
+#     """Create a quick experience entry from the modal"""
+#     try:
+#         job = get_object_or_404(JobPosting, pk=pk)
+        
+#         # Ensure user has access to this job
+#         application = JobApplication.objects.filter(
+#             user=request.user, 
+#             job_posting=job
+#         ).first()
+        
+#         if not application:
+#             return JsonResponse({
+#                 'success': False,
+#                 'message': 'You do not have access to this job'
+#             }, status=403)
+        
+#         # Get form data
+#         skill_name = request.POST.get('skill_name', '').strip()
+#         experience_text = request.POST.get('experience_text', '').strip()
+        
+#         if not skill_name or not experience_text:
+#             return JsonResponse({
+#                 'success': False,
+#                 'message': 'Both skill name and experience text are required'
+#             }, status=400)
+        
+#         # Validate minimum length
+#         if len(experience_text.split()) < 20:
+#             return JsonResponse({
+#                 'success': False,
+#                 'message': 'Please provide a more detailed experience (at least 20 words)'
+#             }, status=400)
+        
+#         # Create the experience record
+#         from experience.models import Experience
+        
+#         # Generate a title from skill name and job
+#         title = f"{skill_name} - {job.company_name}"
+        
+#         experience = Experience.objects.create(
+#             user=request.user,
+#             title=title,
+#             description=experience_text,
+#             experience_type='professional',  # Default to professional
+#             visibility='private',  # Start as private for AI processing
+#             skills_used=[skill_name],
+#             tags=[skill_name.lower().replace(' ', '-'), 'quick-add', job.company_name.lower().replace(' ', '-')],
+#             details={
+#                 'source': 'quick_add_modal',
+#                 'job_posting_id': str(job.pk),
+#                 'job_title': job.job_title,
+#                 'company_name': job.company_name,
+#                 'skill_context': skill_name,
+#                 'raw_input': experience_text,
+#                 'needs_ai_processing': True
+#             }
+#         )
+        
+#         # Queue for AI processing (optional - for future enhancement)
+#         try:
+#             from .tasks import process_quick_experience_async
+#             process_quick_experience_async.delay(experience.experience_id)
+#         except ImportError:
+#             # If Celery isn't set up, process synchronously
+#             process_quick_experience_sync(experience)
+        
+#         return JsonResponse({
+#             'success': True,
+#             'message': 'Experience added successfully',
+#             'experience_id': str(experience.experience_id)
+#         })
+        
+#     except Exception as e:
+#         return JsonResponse({
+#             'success': False,
+#             'message': f'Error creating experience: {str(e)}'
+#         }, status=500)
+
+
+def generate_fallback_prompt(skill_name, job):
+    """Generate a concise fallback prompt when AI is unavailable"""
+    company_name = job.company_name
+    job_title = job.job_title
+    
+    # Simple skill-specific action examples
+    action_examples = {
+        'Python': 'build APIs, automate workflows, or create data analysis scripts',
+        'SQL': 'optimize queries, design database schemas, or create complex joins',
+        'JavaScript': 'build interactive UIs, handle API integrations, or implement real-time features',
+        'React': 'create reusable components, manage application state, or optimize performance',
+        'AWS': 'architect cloud solutions, implement security protocols, or optimize costs',
+        'Snowflake': 'design data models, create data flows, or leverage features like time travel',
+        'Docker': 'containerize applications, orchestrate deployments, or optimize build processes',
+        'Kubernetes': 'manage cluster deployments, implement scaling strategies, or configure networking',
+    }
+    
+    # Get specific examples or use generic ones
+    examples = action_examples.get(skill_name, 'implement solutions, solve complex problems, or deliver measurable results')
+    
+    prompt = f"""
+    <p>Since you're targeting the <strong>{job_title}</strong> role at <strong>{company_name}</strong>, tell us about a specific time when you used <strong>{skill_name}</strong> professionally.</p>
+    
+    <p>Think about a situation where you had to {examples}. What was the challenge, and what specific actions did you take?</p>
+    """
+    
+    return prompt
+
+def process_quick_experience_sync(experience):
+    """Process quick experience synchronously with AI enhancement"""
+    try:
+        # Import your existing AI services
+        from experience.services.ai_analyzer import analyze_experience_with_ai
+        
+        # Run AI analysis on the quick experience
+        ai_analysis = analyze_experience_with_ai(experience)
+        
+        if ai_analysis:
+            # Update experience with AI insights
+            details = experience.details or {}
+            details['ai_analysis'] = ai_analysis
+            details['ai_processed'] = True
+            #details['processed_at'] = timezone.now().isoformat()
+            
+            # Extract additional skills if found
+            detected_skills = []
+            for skill_category in ['technical_skills', 'soft_skills', 'tools_and_technologies', 'domain_expertise']:
+                detected_skills.extend(ai_analysis.get(skill_category, []))
+            
+            if detected_skills:
+                # Merge with existing skills, avoiding duplicates
+                current_skills = experience.skills_used or []
+                all_skills = list(set(current_skills + detected_skills))
+                experience.skills_used = all_skills
+            
+            # Generate an improved description if possible
+            improved_description = generate_improved_description(experience, ai_analysis)
+            if improved_description:
+                details['original_description'] = experience.description
+                details['ai_improved_description'] = improved_description
+                # Optionally replace the description
+                # experience.description = improved_description
+            
+            experience.details = details
+            experience.save()
+            
+    except Exception as e:
+        # Log the error but don't fail the experience creation
+        print(f"Error processing quick experience with AI: {str(e)}")
+        
+        # Still mark as processed, even if AI failed
+        details = experience.details or {}
+        details['ai_processing_failed'] = True
+        details['ai_error'] = str(e)
+        details['processed_at'] = timezone.now().isoformat()
+        experience.details = details
+        experience.save()
+
+
+def generate_improved_description(experience, ai_analysis):
+    """Generate an improved description based on AI analysis"""
+    try:
+        # This is a placeholder for your AI description improvement logic
+        # You might want to use your existing AI services or create a new one
+        
+        original_text = experience.description
+        skill_context = experience.details.get('skill_context', '')
+        
+        # For now, return None to keep original description
+        # You can implement this with your preferred AI service
+        return None
+        
+    except Exception as e:
+        print(f"Error generating improved description: {str(e)}")
+        return None
+

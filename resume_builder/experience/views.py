@@ -6,6 +6,7 @@ from django.views.decorators.http import require_http_methods
 from django.db.models import Q
 import json
 from .models import Experience
+from jobs.models import JobPosting, JobApplication
 from employment.models import Employment
 from education.models import Education
 from .forms import ExperienceForm
@@ -21,8 +22,10 @@ def experiences(request):
     filter_context = request.GET.get('context', 'all')  # all, employment, education, standalone
     search_query = request.GET.get('search', '')
 
-    # Start with all experiences for the logged-in user
-    experiences = Experience.objects.filter(user=request.user)
+    # Start with all experiences for the logged-in user, including linked skills
+    experiences = Experience.objects.filter(user=request.user).prefetch_related(
+        'experienceskill_set__skill'
+    )
 
     # Filter by type if not "all"
     if filter_type != 'all':
@@ -66,34 +69,85 @@ def experiences(request):
         }
     })
 
+
 @login_required
 def add_experience(request):
     """Add new experience, with optional skill pre-population"""
+    # Initialize variables used in context
+    suggested_skill = request.GET.get('skill', '')
+    conversation_id = request.GET.get('conversation_id', '')
+    conversation_data = None
+    
     if request.method == 'POST':
         # Handle form submission (existing code)
         form = ExperienceForm(request.POST, user=request.user)
         if form.is_valid():
+            print("Found form")
             experience = form.save(commit=False)
             experience.user = request.user  # attach user to entry
+            
+            # Link to conversation if conversation_id is provided
+            conversation_id = request.POST.get('conversation_id', '')
+            if conversation_id:
+                try:
+                    from conversation.models import Conversation
+                    conversation = Conversation.objects.get(
+                        conversation_id=conversation_id, 
+                        user=request.user
+                    )
+                    experience.conversation = conversation
+                except Conversation.DoesNotExist:
+                    # If conversation doesn't exist or doesn't belong to user, ignore
+                    pass
+            print("found the saving. ")
             experience.save()
             
-            # Check if user wants AI analysis
-            analyze_with_ai = request.POST.get('analyze_with_ai') == 'on'
-            
-            if analyze_with_ai:
-                # Run AI analysis and redirect to skill confirmation page
-                return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
-            else:
-                messages.success(request, 'Experience entry added successfully!')
-                return redirect('experience:experience')
+            # Always run AI analysis and redirect to skill confirmation page
+            return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
+        else:
+            print('Form is not valid. ')
     else:
         # Pre-populate from URL parameters
         initial_data = {}
-        suggested_skill = request.GET.get('skill', '')  # Note: changed from 'suggested_skill'
         
-        if suggested_skill:
-            initial_data['skills_used_text'] = suggested_skill
-            initial_data['tags_text'] = suggested_skill.lower().replace(' ', '-')
+        # Note: suggested_skill is kept for context but no longer auto-fills form fields
+        
+        # If conversation_id is provided, try to get conversation data for auto-filling
+        if conversation_id:
+            try:
+                from conversation.models import Conversation
+                conversation = Conversation.objects.get(
+                    conversation_id=conversation_id,
+                    user=request.user,
+                    status='completed'  # Only use completed conversations
+                )
+                
+                if conversation.experience_summary:
+                    # Try to parse the summary if it's JSON
+                    import json
+                    try:
+                        summary_data = json.loads(conversation.experience_summary)
+                        conversation_data = {
+                            'title': conversation.title or summary_data.get('role_context', ''),
+                            'summary': summary_data
+                        }
+                        
+                        # Auto-fill form fields from conversation data
+                        initial_data['title'] = conversation.title or summary_data.get('role_context', '')
+                        initial_data['description'] = summary_data.get('narrative_summary', '')
+                        
+                    except json.JSONDecodeError:
+                        # If it's not JSON, use as plain text
+                        conversation_data = {
+                            'title': conversation.title or 'Experience from Conversation',
+                            'summary': {'narrative_summary': conversation.experience_summary}
+                        }
+                        initial_data['title'] = conversation.title or 'Experience from Conversation'
+                        initial_data['description'] = conversation.experience_summary
+                        
+            except Conversation.DoesNotExist:
+                # Conversation doesn't exist or doesn't belong to user
+                pass
         
         form = ExperienceForm(initial=initial_data, user=request.user)
     
@@ -101,10 +155,256 @@ def add_experience(request):
         'form': form,
         'suggested_skill': suggested_skill,
         'from_skill_analysis': bool(suggested_skill),
+        'conversation_id': conversation_id,
+        'from_conversation': bool(conversation_id),
+        'conversation_data': conversation_data,
     }
     
     return render(request, 'add_experience.html', context)
+@login_required
+@require_http_methods(["POST"])
+def quick_add_experience(request, pk):
+    """Create a quick experience entry from the modal with skill linking"""
+    try:
+        job = get_object_or_404(JobPosting, pk=pk)
 
+        # Ensure user has access to this job
+        application = JobApplication.objects.filter(
+            user=request.user, 
+            job_posting=job
+        ).first()
+        
+        if not application:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have access to this job'
+            }, status=403)
+        # Get form data
+        skill_name = request.POST.get('skill_name', '').strip()
+        experience_text = request.POST.get('experience_text', '').strip()
+        
+        if not skill_name or not experience_text:
+            return JsonResponse({
+                'success': False,
+                'message': 'Both skill name and experience text are required'
+            }, status=400)
+        # Validate minimum length
+        if len(experience_text.split()) < 20:
+            return JsonResponse({
+                'success': False,
+                'message': 'Please provide a more detailed experience (at least 20 words)'
+            }, status=400)
+        
+        # Create the experience record
+        from experience.models import Experience
+        # Generate a title from skill name and job
+        title = f"{skill_name} Experience - {job.company_name}"
+        
+        experience = Experience.objects.create(
+            user=request.user,
+            title=title,
+            description=experience_text,
+            experience_type='professional',
+            visibility='public',  
+            skills_used=[skill_name],  # Initial skill list
+            tags=[
+                skill_name.lower().replace(' ', '-'), 
+                'quick-add', 
+                job.company_name.lower().replace(' ', '-'),
+                'job-targeted'
+            ],
+            details={
+                'source': 'quick_add_modal',
+                'job_posting_id': str(job.pk),
+                'job_title': job.job_title,
+                'company_name': job.company_name,
+                'skill_context': skill_name,
+                'raw_input': experience_text,
+                'needs_ai_processing': True,
+                'created_via_skill_gap_analysis': True
+            }
+        )
+        
+        # Create or get the skill object and link it
+        skill_obj = create_or_get_skill(request.user, skill_name)
+        
+        # Link the primary skill to the experience
+        experience_skill, created = experience.add_skill(
+            skill=skill_obj,
+            prominence='primary',
+            proficiency=None,
+            usage_notes=f'Experience created for {job.job_title} at {job.company_name}',
+            method='quick_add'
+        )
+        
+        # Create job-experience relationship
+        from jobs.models import JobExperience
+        
+        job_experience = JobExperience.objects.create(
+            job_posting=job,
+            experience=experience,
+            user=request.user,
+            relevance='created_for',
+            target_skills=[skill_name],
+            creation_source='quick_add',
+            relevance_notes=f'Experience created specifically to demonstrate {skill_name} for this position'
+        )
+        
+        # Always run AI analysis to detect additional skills (like regular add experience form)
+        # This will redirect the frontend to the skill analysis page
+        return JsonResponse({
+            'success': True,
+            'redirect_to_analysis': True,  # Signal frontend to redirect
+            'analysis_url': f'/experience/analyze/{experience.experience_id}',
+            'experience_id': str(experience.experience_id),
+            'skill_linked': skill_obj.title,
+            'job_linked': job.job_title,
+            'message': 'Experience created! Now analyzing for additional skills...'
+        })
+        
+    except Exception as e:
+        return JsonResponse({
+            'success': False,
+            'message': f'Error creating experience: {str(e)}'
+        }, status=500)
+
+
+def create_or_get_skill(user, skill_name):
+    """Create or retrieve a skill object for the user"""
+    from skills.models import Skill
+    
+    # Try to find existing skill (case-insensitive)
+    existing_skill = Skill.objects.filter(
+        user=user,
+        title__iexact=skill_name
+    ).first()
+    
+    if existing_skill:
+        return existing_skill
+    
+    # Create new skill
+    skill_type, skill_category = determine_skill_classification(skill_name)
+    skill = Skill.objects.create(
+        user=user,
+        title=skill_name,
+        category=skill_category,
+        skill_type=skill_type,
+        description=f'Skill extracted from experience targeting {skill_name}',
+        details={
+            'source': 'quick_add_modal',
+            'auto_created': True,
+            'needs_user_review': True
+        }
+    )
+    return skill
+
+
+def determine_skill_classification(skill_name):
+    """Determine skill type and category based on skill name"""
+    skill_lower = skill_name.lower()
+    
+    # Technical skills
+    technical_keywords = [
+        'python', 'java', 'javascript', 'sql', 'react', 'angular', 'vue',
+        'aws', 'azure', 'docker', 'kubernetes', 'git', 'api', 'rest',
+        'snowflake', 'tableau', 'power bi', 'excel', 'r', 'matlab',
+        'machine learning', 'ai', 'data science', 'blockchain', 'html',
+        'css', 'node', 'express', 'mongodb', 'postgresql', 'redis'
+    ]
+    
+    # Soft skills
+    soft_skills_keywords = [
+        'leadership', 'communication', 'teamwork', 'problem solving',
+        'critical thinking', 'time management', 'project management',
+        'collaboration', 'presentation', 'negotiation', 'mentoring',
+        'public speaking', 'writing', 'research', 'analytical thinking'
+    ]
+    
+    if any(keyword in skill_lower for keyword in technical_keywords):
+        return 'Technical', 'Technology'
+    elif any(keyword in skill_lower for keyword in soft_skills_keywords):
+        return 'Soft', 'Communication' if 'communication' in skill_lower else 'Leadership'
+    else:
+        return 'Hard', 'Other'
+
+
+def process_quick_experience_with_skill_linking(experience, primary_skill_name, job):
+    """Enhanced processing that includes skill linking"""
+    try:
+        from experience.services.ai_analyzer import analyze_experience_with_ai
+        
+        # Run AI analysis
+        ai_analysis = analyze_experience_with_ai(experience)
+        
+        if ai_analysis:
+            # Update experience details
+            details = experience.details or {}
+            details['ai_analysis'] = ai_analysis
+            details['ai_processed'] = True
+            #details['processed_at'] = timezone.now().isoformat()
+            
+            # Extract all detected skills
+            all_detected_skills = []
+            for skill_category in ['technical_skills', 'soft_skills', 'tools_and_technologies', 'domain_expertise']:
+                all_detected_skills.extend(ai_analysis.get(skill_category, []))
+            
+            # Link additional skills found by AI
+            skills_linked = []
+            for skill_name in all_detected_skills:
+                if skill_name.lower() != primary_skill_name.lower():  # Don't duplicate primary skill
+                    skill_obj = create_or_get_skill(experience.user, skill_name)
+                    
+                    # Determine prominence based on skill type and relevance
+                    prominence = 'secondary' if skill_name in ai_analysis.get('technical_skills', []) else 'supporting'
+                    
+                    exp_skill, created = experience.add_skill(
+                        skill=skill_obj,
+                        prominence=prominence,
+                        usage_notes=f'Detected by AI analysis for {job.job_title}',
+                        method='ai_suggested'
+                    )
+                    
+                    if created:
+                        skills_linked.append(skill_name)
+            
+            # Update job-experience link with additional skills
+            try:
+                from .models import JobExperience
+                job_exp = JobExperience.objects.get(
+                    job_posting=job,
+                    experience=experience
+                )
+                
+                # Add detected skills to target skills
+                current_skills = job_exp.target_skills or []
+                all_skills = list(set(current_skills + skills_linked))
+                job_exp.target_skills = all_skills
+                job_exp.match_score = job_exp.calculate_match_score()
+                job_exp.save()
+                
+            except JobExperience.DoesNotExist:
+                pass
+            
+            # Update experience skills list
+            current_skills = experience.skills_used or []
+            all_skills = list(set(current_skills + all_detected_skills))
+            experience.skills_used = all_skills
+            
+            experience.details = details
+            experience.save()
+            
+            return {
+                'success': True,
+                'primary_skill': primary_skill_name,
+                'additional_skills': skills_linked,
+                'total_skills_linked': len(skills_linked) + 1
+            }
+            
+    except Exception as e:
+        # Log error but don't fail the experience creation
+        print(f"Error in AI processing: {str(e)}")
+        return {'success': False, 'error': str(e)}
+# Update your analyze_experience_skills view in experience/views.py
 
 @login_required
 def analyze_experience_skills(request, experience_id):
@@ -112,6 +412,9 @@ def analyze_experience_skills(request, experience_id):
     experience = get_object_or_404(Experience, experience_id=experience_id, user=request.user)
 
     if request.method == 'POST':
+        # Determine where to redirect after processing
+        redirect_url = determine_redirect_after_analysis(experience)
+        
         # User is confirming/modifying the AI suggested skills
         action = request.POST.get('action')
         if action == 'accept_all':
@@ -134,7 +437,7 @@ def analyze_experience_skills(request, experience_id):
                 request, 
                 f'Successfully created {created_count} new skills and linked {linked_count} skills to your experience!'
             )
-            return redirect('experience:experience')
+            return redirect(redirect_url)
             
         elif action == 'accept_selected':
             selected_skills = request.POST.getlist('selected_skills')
@@ -172,18 +475,18 @@ def analyze_experience_skills(request, experience_id):
                 request, 
                 f'Successfully created {created_count} new skills and linked {linked_count} skills to your experience!'
             )
-            return redirect('experience:experience')
+            return redirect(redirect_url)
             
         elif action == 'skip':
             # Skip AI analysis
             messages.info(request, 'Experience saved without AI skill analysis.')
-            return redirect('experience:experience')
+            return redirect(redirect_url)
     
     # GET request or initial load - run AI analysis
     ai_analysis = analyze_experience_with_ai(experience)
     if not ai_analysis:
         messages.error(request, 'Unable to analyze experience with AI. Please try again later.')
-        return redirect('experience:experience')
+        return redirect(determine_redirect_after_analysis(experience))
     
     # Prepare skills data for template
     skills_data = prepare_skills_for_template(ai_analysis)
@@ -192,10 +495,31 @@ def analyze_experience_skills(request, experience_id):
         'experience': experience,
         'ai_analysis': ai_analysis,
         'skills_data': skills_data,
-        'total_skills': sum(len(skills) for skills in skills_data.values()) if skills_data else 0
+        'total_skills': sum(len(skills) for skills in skills_data.values()) if skills_data else 0,
+        'from_quick_add': experience.was_quick_added,  # Add this to template context
+        'target_job_info': experience.target_job_info,  # Add job info for context
     }
     
     return render(request, 'analyze_skills.html', context)
+
+
+def determine_redirect_after_analysis(experience):
+    """Determine where to redirect user after skill analysis based on experience source"""
+    
+    # Check if this experience was created via quick add modal
+    if experience.was_quick_added:
+        job_info = experience.target_job_info
+        if job_info and job_info.get('job_id'):
+            # Redirect back to the skill gap analysis page for that job
+            try:
+                from jobs.models import JobPosting
+                job = JobPosting.objects.get(pk=job_info['job_id'])
+                return f'/jobs/{job.pk}/skill-gap/'  # Adjust URL pattern as needed
+            except JobPosting.DoesNotExist:
+                pass
+    
+    # Default: redirect to experiences list
+    return 'experience:experience'
 
 
 @login_required
@@ -219,7 +543,7 @@ def update_experience(request, experience_id):
             })
         else:
             # Otherwise, reload page with form + errors
-            experiences = Experience.objects.filter(user=request.user).order_by('-date_started', '-created_date')
+            experiences = Experience.objects.filter(user=request.user).prefetch_related('experienceskill_set__skill').order_by('-date_started', '-created_date')
             experience_types = Experience.EXPERIENCE_TYPES
 
             return render(request, 'list_experience.html', {

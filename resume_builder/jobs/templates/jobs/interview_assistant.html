@@ -1,0 +1,836 @@
+{% extends 'base.html' %}
+
+{% block title %}Interview Assistant - {{ job.job_title }} at {{ job.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Interview Assistant</h1>
+        <h2>{{ job.job_title }} at {{ job.company_name }}</h2>
+        <p class="header-subtitle">Prepare for your interview by focusing on these experiences that demonstrate the skills they're looking for</p>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if interview_experiences %}
+        <!-- Interview Prep Summary -->
+        <div class="prep-summary">
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ interview_experiences|length }}</div>
+                    <div class="stat-label">Relevant Experiences</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ total_skills_covered }}</div>
+                    <div class="stat-label">Skills Covered</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ multi_skill_experiences }}</div>
+                    <div class="stat-label">Multi-Skill Stories</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Experience Cards Section -->
+        <div class="experiences-section">
+            <div class="section-header">
+                <div class="header-content">
+                    <h2>Your Best Interview Stories</h2>
+                    <p class="section-subtitle">Prioritized by the number of job-relevant skills they demonstrate</p>
+                </div>
+                
+                {% if interview_experiences|length > 5 %}
+                    <div class="pagination-controls">
+                        <span class="page-info">
+                            Showing <span id="current-start">1</span>-<span id="current-end">5</span> 
+                            of {{ interview_experiences|length }} experiences
+                        </span>
+                        <div class="nav-buttons">
+                            <button id="prev-btn" class="nav-btn" disabled>
+                                ← Previous
+                            </button>
+                            <button id="next-btn" class="nav-btn">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+
+            <div class="experiences-list" id="experiences-container">
+                {% for exp_data in interview_experiences %}
+                    <div class="experience-card {% if forloop.counter0 >= 5 %}card-hidden{% endif %}" data-index="{{ forloop.counter0 }}">
+                        <div class="experience-header">
+                            <div class="experience-title-section">
+                                <h3 class="experience-title">{{ exp_data.experience.title }}</h3>
+                                <p class="experience-context">{{ exp_data.experience.context_name }} • {{ exp_data.experience.duration_text }}</p>
+                            </div>
+                            <div class="skill-count-badge">
+                                <span class="count-number">{{ exp_data.skill_count }}</span>
+                                <span class="count-label">skill{{ exp_data.skill_count|pluralize }}</span>
+                            </div>
+                        </div>
+
+                        <div class="experience-description">
+                            <p>{{ exp_data.experience.description|truncatewords:40 }}</p>
+                        </div>
+
+                        <div class="skills-section">
+                            <div class="skills-label">Demonstrates these job requirements:</div>
+                            <div class="skill-tags">
+                                {% for skill in exp_data.matching_skills %}
+                                    <span class="skill-tag {% if skill in exp_data.primary_skills %}skill-primary{% else %}skill-secondary{% endif %}">
+                                        {{ skill }}
+                                        {% if skill in exp_data.primary_skills %}<span class="primary-indicator">★</span>{% endif %}
+                                    </span>
+                                {% endfor %}
+                            </div>
+                        </div>
+
+                        <div class="interview-tips">
+                            <div class="tips-header">
+                                <span class="tips-icon">💡</span>
+                                <span class="tips-label">Interview Focus Areas:</span>
+                            </div>
+                            <ul class="tips-list">
+                                {% if exp_data.primary_skills %}
+                                    <li><strong>Lead with:</strong> Your {{ exp_data.primary_skills.0 }}{% if exp_data.primary_skills|length > 1 %} and {{ exp_data.primary_skills.1 }}{% endif %} expertise</li>
+                                {% endif %}
+                                {% if exp_data.skill_count >= 3 %}
+                                    <li><strong>Highlight:</strong> This experience covers {{ exp_data.skill_count }} of their requirements</li>
+                                {% endif %}
+                                <li><strong>Prepare:</strong> Specific examples and measurable outcomes from this role</li>
+                            </ul>
+                        </div>
+
+                        <div class="card-actions">
+                            <a href="{% url 'experience:get_experience_data' exp_data.experience.experience_id %}" class="btn btn-secondary btn-sm">
+                                View Full Details
+                            </a>
+                            <button class="btn btn-primary btn-sm" onclick="copyExperience('{{ exp_data.experience.title|escapejs }}', '{{ exp_data.experience.description|escapejs }}')">
+                                Copy for Notes
+                            </button>
+                        </div>
+                    </div>
+                {% endfor %}
+            </div>
+        </div>
+
+        <!-- Interview Strategy Tips -->
+        <div class="strategy-section">
+            <h2>Interview Strategy</h2>
+            <div class="strategy-grid">
+                <div class="strategy-card">
+                    <h4>Story Preparation</h4>
+                    <ul>
+                        <li>Use the STAR method (Situation, Task, Action, Result)</li>
+                        <li>Focus on quantifiable achievements</li>
+                        <li>Practice 2-3 stories that cover multiple skills</li>
+                    </ul>
+                </div>
+                <div class="strategy-card">
+                    <h4>Skill Positioning</h4>
+                    <ul>
+                        <li>Lead with experiences marked with ★ (primary skills)</li>
+                        <li>Connect your background to their specific needs</li>
+                        <li>Show progression and growth in key areas</li>
+                    </ul>
+                </div>
+                <div class="strategy-card">
+                    <h4>Questions to Ask</h4>
+                    <ul>
+                        <li>How would success be measured in this role?</li>
+                        <li>What challenges is the team currently facing?</li>
+                        <li>How do you see this role evolving?</li>
+                    </ul>
+                </div>
+            </div>
+        </div>
+
+    {% else %}
+        <div class="no-experiences">
+            <div class="no-experiences-content">
+                <h2>No Matching Experiences Found</h2>
+                <p>You don't have any experiences that demonstrate the skills required for this job.</p>
+                <div class="no-experiences-actions">
+                    <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">
+                        Add Relevant Experience
+                    </a>
+                    <a href="{% url 'jobs:job_skill_gap' job.pk %}" class="btn btn-secondary">
+                        View Skill Gaps
+                    </a>
+                </div>
+            </div>
+        </div>
+    {% endif %}
+
+    <!-- Navigation -->
+    <div class="actions">
+        <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-secondary">← Back to Dashboard</a>
+        <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">View Skill Gaps</a>
+        <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-secondary">Job Details</a>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 3rem;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 2.2rem;
+}
+
+.header h2 {
+    margin: 0 0 1rem 0;
+    color: #666;
+    font-size: 1.3rem;
+    font-weight: 400;
+}
+
+.header-subtitle {
+    margin: 0;
+    color: #777;
+    font-size: 1rem;
+    max-width: 600px;
+    margin: 0 auto;
+    line-height: 1.5;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+/* Prep Summary */
+.prep-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2rem;
+    text-align: center;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+/* Experiences Section */
+.experiences-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 3rem;
+    overflow: hidden;
+}
+
+.section-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 2rem 2rem 1rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.header-content h2 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.6rem;
+}
+
+.section-subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.pagination-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nav-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.experiences-list {
+    padding: 1rem 2rem 2rem 2rem;
+}
+
+/* Experience Cards */
+.experience-card {
+    background: #f8f9fa;
+    border-radius: 12px;
+    padding: 2rem;
+    margin-bottom: 2rem;
+    border-left: 5px solid #007bff;
+    transition: transform 0.2s, box-shadow 0.2s;
+}
+
+.experience-card.card-hidden {
+    display: none;
+}
+
+.experience-card:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
+}
+
+.experience-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 1.5rem;
+}
+
+.experience-title {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.experience-context {
+    margin: 0;
+    color: #666;
+    font-size: 0.95rem;
+}
+
+.skill-count-badge {
+    background: #007bff;
+    color: white;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    text-align: center;
+    min-width: 80px;
+}
+
+.count-number {
+    display: block;
+    font-size: 1.5rem;
+    font-weight: bold;
+    line-height: 1;
+}
+
+.count-label {
+    display: block;
+    font-size: 0.8rem;
+    opacity: 0.9;
+    margin-top: 0.25rem;
+}
+
+.experience-description {
+    margin-bottom: 1.5rem;
+}
+
+.experience-description p {
+    margin: 0;
+    color: #555;
+    font-size: 1rem;
+    line-height: 1.6;
+}
+
+/* Skills Section */
+.skills-section {
+    margin-bottom: 1.5rem;
+}
+
+.skills-label {
+    font-size: 0.9rem;
+    color: #666;
+    margin-bottom: 0.75rem;
+    font-weight: 500;
+}
+
+.skill-tags {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.5rem;
+}
+
+.skill-tag {
+    padding: 0.4rem 0.8rem;
+    border-radius: 16px;
+    font-size: 0.85rem;
+    font-weight: 500;
+    display: flex;
+    align-items: center;
+    gap: 0.25rem;
+}
+
+.skill-primary {
+    background-color: #e8f2ff;
+    color: #0066cc;
+    border: 1px solid #b3d9ff;
+}
+
+.skill-secondary {
+    background-color: #f0f0f0;
+    color: #555;
+    border: 1px solid #ddd;
+}
+
+.primary-indicator {
+    color: #ffa500;
+    font-size: 0.7rem;
+}
+
+/* Interview Tips */
+.interview-tips {
+    background: white;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1.5rem;
+    border: 1px solid #e9ecef;
+}
+
+.tips-header {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    margin-bottom: 1rem;
+}
+
+.tips-icon {
+    font-size: 1.1rem;
+}
+
+.tips-label {
+    font-weight: 600;
+    color: #333;
+}
+
+.tips-list {
+    margin: 0;
+    padding-left: 1.5rem;
+}
+
+.tips-list li {
+    margin-bottom: 0.5rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.tips-list li:last-child {
+    margin-bottom: 0;
+}
+
+/* Card Actions */
+.card-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+}
+
+.btn {
+    padding: 0.5rem 1rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-sm {
+    padding: 0.4rem 0.8rem;
+    font-size: 0.85rem;
+}
+
+/* Strategy Section */
+.strategy-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    padding: 2rem;
+    margin-bottom: 3rem;
+}
+
+.strategy-section h2 {
+    margin: 0 0 2rem 0;
+    color: #333;
+    text-align: center;
+}
+
+.strategy-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(280px, 1fr));
+    gap: 2rem;
+}
+
+.strategy-card {
+    background: #f8f9fa;
+    border-radius: 8px;
+    padding: 1.5rem;
+    border-top: 4px solid #007bff;
+}
+
+.strategy-card h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.strategy-card ul {
+    margin: 0;
+    padding-left: 1.2rem;
+}
+
+.strategy-card li {
+    margin-bottom: 0.5rem;
+    color: #555;
+    line-height: 1.5;
+}
+
+.strategy-card li:last-child {
+    margin-bottom: 0;
+}
+
+/* No Experiences */
+.no-experiences {
+    text-align: center;
+    padding: 4rem 2rem;
+}
+
+.no-experiences-content h2 {
+    margin: 0 0 1rem 0;
+    color: #333;
+}
+
+.no-experiences-content p {
+    margin: 0 0 2rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.no-experiences-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+}
+
+/* Actions */
+.actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+
+    .summary-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .section-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+
+    .pagination-controls {
+        align-self: stretch;
+    }
+
+    .experience-header {
+        flex-direction: column;
+        gap: 1rem;
+    }
+
+    .skill-count-badge {
+        align-self: flex-start;
+    }
+
+    .card-actions {
+        justify-content: stretch;
+        flex-direction: column;
+    }
+
+    .strategy-grid {
+        grid-template-columns: 1fr;
+        gap: 1.5rem;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .no-experiences-actions {
+        flex-direction: column;
+        align-items: center;
+    }
+
+    .experiences-list {
+        padding: 1rem;
+    }
+
+    .experience-card {
+        padding: 1.5rem;
+    }
+}
+</style>
+
+<script>
+// Copy experience function
+function copyExperience(title, description) {
+    const text = `${title}\n\n${description}`;
+    
+    if (navigator.clipboard && window.isSecureContext) {
+        navigator.clipboard.writeText(text).then(() => {
+            showCopySuccess();
+        }).catch(err => {
+            console.error('Failed to copy: ', err);
+            fallbackCopy(text);
+        });
+    } else {
+        fallbackCopy(text);
+    }
+}
+
+function fallbackCopy(text) {
+    const textArea = document.createElement('textarea');
+    textArea.value = text;
+    textArea.style.position = 'fixed';
+    textArea.style.left = '-999999px';
+    textArea.style.top = '-999999px';
+    document.body.appendChild(textArea);
+    textArea.focus();
+    textArea.select();
+    
+    try {
+        document.execCommand('copy');
+        showCopySuccess();
+    } catch (err) {
+        console.error('Fallback copy failed: ', err);
+    }
+    
+    document.body.removeChild(textArea);
+}
+
+function showCopySuccess() {
+    // Create temporary success message
+    const success = document.createElement('div');
+    success.className = 'copy-success';
+    success.textContent = 'Copied to clipboard!';
+    success.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: #28a745;
+        color: white;
+        padding: 0.75rem 1rem;
+        border-radius: 4px;
+        z-index: 1000;
+        animation: slideIn 0.3s ease;
+    `;
+    
+    document.body.appendChild(success);
+    
+    setTimeout(() => {
+        success.remove();
+    }, 2000);
+}
+
+// Add CSS for animation
+const style = document.createElement('style');
+style.textContent = `
+    @keyframes slideIn {
+        from {
+            transform: translateX(100%);
+            opacity: 0;
+        }
+        to {
+            transform: translateX(0);
+            opacity: 1;
+        }
+    }
+`;
+document.head.appendChild(style);
+
+// Pagination functionality
+document.addEventListener('DOMContentLoaded', function() {
+    const experienceCards = document.querySelectorAll('.experience-card');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentStart = document.getElementById('current-start');
+    const currentEnd = document.getElementById('current-end');
+    
+    if (!experienceCards.length || experienceCards.length <= 5) {
+        return; // No pagination needed
+    }
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
+    const totalItems = experienceCards.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    function showPage(pageNum) {
+        // Hide all cards
+        experienceCards.forEach(card => {
+            card.style.display = 'none';
+        });
+        
+        // Show cards for current page
+        const startIndex = pageNum * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            if (experienceCards[i]) {
+                experienceCards[i].style.display = 'block';
+            }
+        }
+        
+        // Update pagination info
+        if (currentStart && currentEnd) {
+            currentStart.textContent = startIndex + 1;
+            currentEnd.textContent = endIndex;
+        }
+        
+        // Update button states
+        if (prevBtn) {
+            prevBtn.disabled = pageNum === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = pageNum === totalPages - 1;
+        }
+    }
+    
+    // Event listeners
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            if (currentPage > 0) {
+                currentPage--;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    // Initialize first page
+    showPage(0);
+});
+</script>
+{% endblock %}

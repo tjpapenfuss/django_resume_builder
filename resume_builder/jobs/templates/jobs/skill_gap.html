@@ -1,0 +1,1461 @@
+{% extends 'base.html' %}
+
+{% block title %}Skill Gap Analysis - {{ job.job_title }} at {{ job.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Skill Gap Analysis</h1>
+        <h2>{{ job.job_title }} at {{ job.company_name }}</h2>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    {% if skill_match_analysis %}
+        <!-- Analysis Summary Bar -->
+        <div class="analysis-summary">
+            <div class="summary-stats">
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.overall_match_score }}%</div>
+                    <div class="stat-label">Overall Match</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.total_matched_skills }}</div>
+                    <div class="stat-label">Skills Matched</div>
+                </div>
+                <div class="stat-item">
+                    <div class="stat-number">{{ skill_match_analysis.top_skill_gaps|length }}</div>
+                    <div class="stat-label">Skills to Add</div>
+                </div>
+                <div class="stat-item">
+                    <div class="match-level match-{{ skill_match_analysis.match_level }}">
+                        {% if skill_match_analysis.match_level == 'excellent' %}
+                            Excellent Match
+                        {% elif skill_match_analysis.match_level == 'good' %}
+                            Good Match
+                        {% elif skill_match_analysis.match_level == 'fair' %}
+                            Fair Match
+                        {% else %}
+                            Needs Work
+                        {% endif %}
+                    </div>
+                </div>
+            </div>
+        </div>
+        <!-- Button at the top near the header for interview prep -->
+        <div class="quick-actions-bar">
+            <a href="{% url 'jobs:job_interview_assistant' job.pk %}" class="interview-assistant-cta">
+                <div class="cta-icon">🎯</div>
+                <div class="cta-content">
+                    <h3>Prepare for Your Interview</h3>
+                    <p>See which of your experiences best demonstrate the skills they're looking for</p>
+                </div>
+                <div class="cta-arrow">→</div>
+            </a>
+        </div>
+
+        <!-- Top Skills to Add -->
+        <div class="skills-section">
+            <div class="skills-header">
+                <div class="header-content">
+                    <h2>Top Skills to Add</h2>
+                    <p class="section-subtitle">Focus on these skills to improve your match for this position</p>
+                </div>
+                
+                {% if skill_match_analysis.top_skill_gaps|length > 5 %}
+                    <div class="pagination-controls">
+                        <span class="page-info">
+                            Showing <span id="current-start">1</span>-<span id="current-end">5</span> 
+                            of {{ skill_match_analysis.top_skill_gaps|length }} skills
+                        </span>
+                        <div class="nav-buttons">
+                            <button id="prev-btn" class="nav-btn" disabled>
+                                ← Previous
+                            </button>
+                            <button id="next-btn" class="nav-btn">
+                                Next →
+                            </button>
+                        </div>
+                    </div>
+                {% endif %}
+            </div>
+            
+            {% if skill_match_analysis.top_skill_gaps %}
+                <div class="skills-list" id="skills-container">
+                    {% for gap in skill_match_analysis.top_skill_gaps %}
+                        <div class="skill-item {% if forloop.counter0 >= 5 %}skill-hidden{% endif %}" data-index="{{ forloop.counter0 }}">
+                            <div class="skill-info">
+                                <div class="skill-name">{{ gap.skill_name }}</div>
+                                <div class="skill-meta">
+                                    <span class="skill-priority priority-{{ gap.priority }}">
+                                        {% if gap.category == 'technology' or gap.priority_score >= 100 %}
+                                            Technology
+                                        {% elif gap.category == 'required' or gap.priority_score >= 90 %}
+                                            Required
+                                        {% elif gap.category == 'keyword' or gap.priority_score >= 70 %}
+                                            Keyword
+                                        {% else %}
+                                            Preferred
+                                        {% endif %}
+                                    </span>
+                                    <span class="skill-category">{{ gap.suggested_category }}</span>
+                                </div>
+                            </div>
+                            <!-- <div class="skill-action">
+                                <a href="{% url 'experience:add_experience' %}?skill={{ gap.skill_name|urlencode }}&job_id={{ job.pk }}" 
+                                   class="btn btn-primary">
+                                    Add Experience for {{ gap.skill_name }}
+                                </a>
+                            </div> -->
+                            <button onclick="openQuickExperienceModal('{{ gap.skill_name|escapejs }}')" 
+                                    class="btn btn-primary">
+                                Add Experience for {{ gap.skill_name }}
+                            </button>
+                        </div>
+                    {% endfor %}
+                </div>
+            {% else %}
+                <div class="no-gaps">
+                    <p>Great job! You have all the key skills for this position.</p>
+                    <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">View Job Details</a>
+                </div>
+            {% endif %}
+        </div>
+    {% else %}
+        <div class="no-analysis">
+            <h2>No Analysis Available</h2>
+            <p>Unable to analyze skills for this job. Make sure you have skills in your profile and the job has been processed.</p>
+            <a href="{% url 'jobs:job_detail' job.pk %}" class="btn btn-secondary">Back to Job</a>
+        </div>
+    {% endif %}
+
+    <!-- Actions -->
+    <div class="actions">
+        <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-primary">Extended Job Details</a>
+        <a href="{% url 'jobs:job_interview_assistant' job.pk %}" class="btn btn-primary">Interview Assistant</a>
+        <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">Add General Experience</a>
+    </div>
+
+    <!-- Quick Experience Modal -->
+    <div id="quickExperienceModal" class="modal" style="display: none;">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h2>Add Experience for <span id="modalSkillName"></span></h2>
+                <button class="modal-close" onclick="closeQuickExperienceModal()">&times;</button>
+            </div>
+            
+            <div class="modal-body">
+                <!-- Loading state -->
+                <div id="modalLoading" class="loading-state">
+                    <div class="spinner"></div>
+                    <p>Generating personalized prompt...</p>
+                </div>
+                
+                <!-- Form content -->
+                <div id="modalForm" style="display: none;">
+                    <form id="quickExperienceForm">
+                        {% csrf_token %}
+                        <input type="hidden" id="skillName" name="skill_name" value="">
+                        <input type="hidden" id="jobId" name="job_id" value="{{ job.pk }}">
+                        
+                        <!-- AI Generated Prompt - Now Shorter -->
+                        <div class="prompt-section">
+                            <div class="prompt-header">
+                                <h3>Your Personalized Prompt</h3>
+                                <span class="ai-badge">✨ AI Generated</span>
+                            </div>
+                            <div id="aiPrompt" class="ai-prompt">
+                                <!-- Shorter AI-generated prompt will be inserted here -->
+                            </div>
+                        </div>
+                        
+                        <!-- Collapsible STAR Method Guide -->
+                        <div class="star-guide-section">
+                            <button type="button" class="star-toggle" onclick="toggleStarGuide()">
+                                <span class="toggle-icon">▶</span>
+                                <span class="toggle-text">Need help structuring your response? View STAR Method Guide</span>
+                            </button>
+                            
+                            <div id="starGuideContent" class="star-content" style="display: none;">
+                                <div class="star-method">
+                                    <h4>Use the STAR Method to Structure Your Response:</h4>
+                                    <div class="star-steps">
+                                        <div class="star-step">
+                                            <div class="star-letter">S</div>
+                                            <div class="star-info">
+                                                <strong>Situation:</strong> Set the context. What was the project, challenge, or scenario you faced?
+                                            </div>
+                                        </div>
+                                        <div class="star-step">
+                                            <div class="star-letter">T</div>
+                                            <div class="star-info">
+                                                <strong>Task:</strong> What was your specific responsibility or goal in this situation?
+                                            </div>
+                                        </div>
+                                        <div class="star-step">
+                                            <div class="star-letter">A</div>
+                                            <div class="star-info">
+                                                <strong>Action:</strong> What specific steps did you take? Focus on what YOU did.
+                                            </div>
+                                        </div>
+                                        <div class="star-step">
+                                            <div class="star-letter">R</div>
+                                            <div class="star-info">
+                                                <strong>Result:</strong> What was the outcome? Include metrics when possible (e.g., "increased efficiency by 25%").
+                                            </div>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Experience Input -->
+                        <div class="form-group">
+                            <label for="experienceText">Your Experience Story</label>
+                            <textarea 
+                                id="experienceText" 
+                                name="experience_text" 
+                                placeholder="Describe a specific situation where you used this skill. Focus on what you did and the results you achieved..."
+                                rows="8"
+                                required
+                            ></textarea>
+                            <div class="textarea-footer">
+                                <span class="word-count">0 words</span>
+                                <button type="button" class="voice-btn" onclick="toggleVoiceInput()" title="Voice input (coming soon)" disabled>
+                                    🎤
+                                </button>
+                            </div>
+                        </div>
+                        
+                        <!-- Form Actions -->
+                        <div class="form-actions">
+                            <button type="button" class="btn btn-secondary" onclick="closeQuickExperienceModal()">
+                                Cancel
+                            </button>
+                            <button type="submit" class="btn btn-primary" id="submitBtn">
+                                <span class="btn-text">Add Experience</span>
+                                <span class="btn-spinner" style="display: none;">
+                                    <div class="small-spinner"></div>
+                                </span>
+                            </button>
+                        </div>
+                    </form>
+                </div>
+                
+                <!-- Error state -->
+                <div id="modalError" style="display: none;" class="error-state">
+                    <h3>Unable to Generate Prompt</h3>
+                    <p id="errorMessage">There was an error generating the personalized prompt. You can still add your experience manually.</p>
+                    <button class="btn btn-secondary" onclick="showManualForm()">Continue Manually</button>
+                    <button class="btn btn-primary" onclick="retryPromptGeneration()">Try Again</button>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Overlay -->
+    <div id="modalOverlay" class="modal-overlay" style="display: none;" onclick="closeQuickExperienceModal()"></div>
+</div>
+
+<style>
+.container {
+    max-width: 900px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 2rem;
+}
+
+.header h2 {
+    margin: 0;
+    color: #666;
+    font-size: 1.2rem;
+    font-weight: 400;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border: 1px solid #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border: 1px solid #f5c6cb;
+    color: #721c24;
+}
+
+/* Analysis Summary Bar */
+.analysis-summary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 12px;
+    margin-bottom: 3rem;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+}
+
+.summary-stats {
+    display: grid;
+    grid-template-columns: repeat(auto-fit, minmax(150px, 1fr));
+    gap: 2rem;
+    text-align: center;
+}
+
+.stat-item {
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+}
+
+.stat-number {
+    font-size: 2.5rem;
+    font-weight: bold;
+    margin-bottom: 0.5rem;
+}
+
+.stat-label {
+    font-size: 0.9rem;
+    opacity: 0.9;
+    text-transform: uppercase;
+    letter-spacing: 0.5px;
+}
+
+.match-level {
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-weight: 600;
+    font-size: 1rem;
+    margin-top: 0.5rem;
+}
+
+.match-level.match-excellent {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.match-level.match-good {
+    background: rgba(40, 167, 69, 0.2);
+    color: #28a745;
+}
+
+.match-level.match-fair {
+    background: rgba(255, 193, 7, 0.2);
+    color: #ffc107;
+}
+
+.match-level.match-poor {
+    background: rgba(220, 53, 69, 0.2);
+    color: #dc3545;
+}
+
+/* Skills Section */
+.skills-section {
+    background: white;
+    border-radius: 8px;
+    box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+    margin-bottom: 2rem;
+    overflow: hidden;
+}
+
+.skills-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+}
+
+.header-content {
+    flex: 1;
+}
+
+.skills-section h2 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.section-subtitle {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
+.pagination-controls {
+    display: flex;
+    flex-direction: column;
+    align-items: flex-end;
+    gap: 0.5rem;
+}
+
+.page-info {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.nav-buttons {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.nav-btn {
+    padding: 0.5rem 1rem;
+    border: 1px solid #dee2e6;
+    background: white;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.nav-btn:hover:not(:disabled) {
+    background: #f8f9fa;
+    border-color: #007bff;
+    color: #007bff;
+}
+
+.nav-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+.skills-list {
+    padding: 0;
+}
+
+.skill-item {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #f0f0f0;
+    transition: background-color 0.2s;
+}
+
+.skill-item.skill-hidden {
+    display: none;
+}
+
+.skill-item:hover {
+    background-color: #f8f9fa;
+}
+
+.skill-item:last-child {
+    border-bottom: none;
+}
+
+.skill-info {
+    flex: 1;
+}
+
+.skill-name {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin-bottom: 0.5rem;
+}
+
+.skill-meta {
+    display: flex;
+    gap: 1rem;
+    align-items: center;
+}
+
+.skill-priority {
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-priority.priority-critical {
+    background: #dc3545;
+    color: white;
+}
+
+.skill-priority.priority-high {
+    background: #ffc107;
+    color: #856404;
+}
+
+.skill-priority.priority-medium {
+    background: #6c757d;
+    color: white;
+}
+
+.skill-category {
+    background: #e9ecef;
+    color: #495057;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.skill-action {
+    margin-left: 2rem;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    text-decoration: none;
+    display: inline-block;
+    cursor: pointer;
+    transition: all 0.2s;
+    white-space: nowrap;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 4px rgba(0, 123, 255, 0.3);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.no-gaps, .no-analysis {
+    text-align: center;
+    padding: 3rem 2rem;
+    color: #666;
+}
+
+.no-gaps h2, .no-analysis h2 {
+    color: #28a745;
+    margin-bottom: 1rem;
+}
+
+.actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    padding-top: 2rem;
+    border-top: 1px solid #e9ecef;
+    margin-top: 2rem;
+}
+.quick-actions-bar {
+    margin-bottom: 3rem;
+}
+
+.interview-assistant-cta {
+    display: flex;
+    align-items: center;
+    background: linear-gradient(135deg, #28a745, #20c997);
+    color: white;
+    text-decoration: none;
+    padding: 1.5rem 2rem;
+    border-radius: 12px;
+    box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+    transition: all 0.3s ease;
+    gap: 1.5rem;
+}
+
+.interview-assistant-cta:hover {
+    transform: translateY(-2px);
+    box-shadow: 0 6px 15px rgba(40, 167, 69, 0.3);
+    color: white;
+    text-decoration: none;
+}
+
+.cta-icon {
+    font-size: 2.5rem;
+    opacity: 0.9;
+}
+
+.cta-content {
+    flex: 1;
+}
+
+.cta-content h3 {
+    margin: 0 0 0.5rem 0;
+    font-size: 1.3rem;
+    font-weight: 600;
+}
+
+.cta-content p {
+    margin: 0;
+    font-size: 1rem;
+    opacity: 0.9;
+}
+
+.cta-arrow {
+    font-size: 1.5rem;
+    opacity: 0.8;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+
+    .summary-stats {
+        grid-template-columns: 1fr 1fr;
+        gap: 1rem;
+    }
+
+    .stat-number {
+        font-size: 2rem;
+    }
+
+    .skill-item {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 1rem;
+        padding: 1rem;
+    }
+
+    .skill-action {
+        margin-left: 0;
+        align-self: stretch;
+    }
+
+    .skill-action .btn {
+        width: 100%;
+        text-align: center;
+    }
+
+    .actions {
+        flex-direction: column;
+    }
+
+    .skills-section h2 {
+        padding: 1rem 1rem 0.5rem 1rem;
+        font-size: 1.3rem;
+    }
+
+    .section-subtitle {
+        padding: 0 1rem 1rem 1rem;
+        font-size: 0.9rem;
+    }
+    .skills-header h2 {
+        font-size: 1.3rem;
+    }
+
+    .header-content .section-subtitle {
+        font-size: 0.9rem;
+    }
+
+    .pagination-controls {
+        align-items: flex-start;
+        margin-top: 1rem;
+    }
+
+    .nav-buttons {
+        flex-direction: column;
+        gap: 0.25rem;
+    }
+
+    .nav-btn {
+        padding: 0.4rem 0.8rem;
+        font-size: 0.8rem;
+    }
+}
+
+@media (max-width: 768px) {
+    .interview-assistant-cta {
+        flex-direction: column;
+        text-align: center;
+        gap: 1rem;
+        padding: 1.5rem;
+    }
+    
+    .cta-arrow {
+        transform: rotate(90deg);
+    }
+}
+.modal {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    z-index: 1000;
+    max-width: 800px;
+    width: 90%;
+    max-height: 90vh;
+    overflow-y: auto;
+    background: white;
+    border-radius: 12px;
+    box-shadow: 0 10px 25px rgba(0, 0, 0, 0.2);
+}
+
+.modal-overlay {
+    position: fixed;
+    top: 0;
+    left: 0;
+    right: 0;
+    bottom: 0;
+    background: rgba(0, 0, 0, 0.5);
+    z-index: 999;
+    backdrop-filter: blur(2px);
+}
+
+.modal-content {
+    padding: 0;
+}
+
+.modal-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border-radius: 12px 12px 0 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    font-size: 1.4rem;
+    font-weight: 600;
+}
+
+.modal-close {
+    background: none;
+    border: none;
+    font-size: 1.5rem;
+    color: white;
+    cursor: pointer;
+    padding: 0;
+    width: 30px;
+    height: 30px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    transition: background-color 0.2s;
+}
+
+.modal-close:hover {
+    background: rgba(255, 255, 255, 0.2);
+}
+
+.modal-body {
+    padding: 2rem;
+}
+
+/* Loading State */
+.loading-state {
+    text-align: center;
+    padding: 3rem 1rem;
+    color: #666;
+}
+
+.spinner {
+    width: 40px;
+    height: 40px;
+    border: 4px solid #f3f3f3;
+    border-top: 4px solid #667eea;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 1rem auto;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Prompt Section */
+.prompt-section {
+    margin-bottom: 2rem;
+}
+
+.prompt-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 1rem;
+}
+
+.prompt-header h3 {
+    margin: 0;
+    color: #333;
+    font-size: 1.1rem;
+}
+
+.ai-badge {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+}
+
+.ai-prompt {
+    background: linear-gradient(135deg, #f8f9fa, #e9ecef);
+    border: 2px solid #667eea;
+    border-radius: 8px;
+    padding: 1.5rem;
+    font-size: 1rem;
+    line-height: 1.6;
+    color: #333;
+    position: relative;
+}
+
+.ai-prompt::before {
+    content: "💡";
+    position: absolute;
+    top: -10px;
+    left: 20px;
+    background: white;
+    padding: 0 0.5rem;
+    font-size: 1.2rem;
+}
+
+/* Form Elements */
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 600;
+    color: #333;
+}
+
+.form-group textarea {
+    width: 100%;
+    padding: 1rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 1rem;
+    font-family: inherit;
+    line-height: 1.5;
+    resize: vertical;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-group textarea:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 3px rgba(102, 126, 234, 0.1);
+}
+
+.textarea-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-top: 0.5rem;
+}
+
+.word-count {
+    font-size: 0.9rem;
+    color: #666;
+}
+
+.voice-btn {
+    background: #f8f9fa;
+    border: 1px solid #dee2e6;
+    border-radius: 6px;
+    padding: 0.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    transition: all 0.2s;
+}
+
+.voice-btn:hover:not(:disabled) {
+    background: #e9ecef;
+    border-color: #adb5bd;
+}
+
+.voice-btn:disabled {
+    opacity: 0.5;
+    cursor: not-allowed;
+}
+
+/* Form Actions */
+.form-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    padding-top: 1.5rem;
+    border-top: 1px solid #e9ecef;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    font-size: 1rem;
+    font-weight: 500;
+    cursor: pointer;
+    transition: all 0.2s;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    min-width: 120px;
+    justify-content: center;
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+}
+
+.btn-primary:hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 8px rgba(102, 126, 234, 0.3);
+}
+
+.btn-secondary {
+    background: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background: #545b62;
+}
+
+.small-spinner {
+    width: 16px;
+    height: 16px;
+    border: 2px solid transparent;
+    border-top: 2px solid currentColor;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+}
+
+/* Error State */
+.error-state {
+    text-align: center;
+    padding: 2rem 1rem;
+    color: #666;
+}
+
+.error-state h3 {
+    color: #dc3545;
+    margin-bottom: 1rem;
+}
+
+.error-state .btn {
+    margin: 0.5rem;
+}
+
+/* Mobile Responsive */
+@media (max-width: 768px) {
+    .modal {
+        width: 95%;
+        max-height: 95vh;
+    }
+    
+    .modal-header {
+        padding: 1rem 1.5rem;
+    }
+    
+    .modal-header h2 {
+        font-size: 1.2rem;
+    }
+    
+    .modal-body {
+        padding: 1.5rem;
+    }
+    
+    .form-actions {
+        flex-direction: column;
+    }
+    
+    .prompt-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+}
+/* STAR Guide Styles */
+.star-guide-section {
+    margin-bottom: 2rem;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    overflow: hidden;
+}
+
+.star-toggle {
+    width: 100%;
+    background: #f8f9fa;
+    border: none;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    font-size: 0.95rem;
+    font-weight: 500;
+    color: #495057;
+    transition: all 0.2s;
+}
+
+.star-toggle:hover {
+    background: #e9ecef;
+}
+
+.toggle-icon {
+    font-size: 0.8rem;
+    transition: transform 0.2s;
+    color: #6c757d;
+}
+
+.toggle-icon.expanded {
+    transform: rotate(90deg);
+}
+
+.star-content {
+    border-top: 1px solid #dee2e6;
+    background: white;
+}
+
+.star-method {
+    padding: 1.5rem;
+}
+
+.star-method h4 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1rem;
+}
+
+.star-steps {
+    display: flex;
+    flex-direction: column;
+    gap: 1rem;
+}
+
+.star-step {
+    display: flex;
+    align-items: flex-start;
+    gap: 1rem;
+}
+
+.star-letter {
+    width: 32px;
+    height: 32px;
+    background: linear-gradient(135deg, #667eea, #764ba2);
+    color: white;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    font-weight: bold;
+    font-size: 0.9rem;
+    flex-shrink: 0;
+}
+
+.star-info {
+    flex: 1;
+    line-height: 1.5;
+    color: #555;
+}
+
+.star-info strong {
+    color: #333;
+}
+
+/* Mobile responsive for STAR guide */
+@media (max-width: 768px) {
+    .star-step {
+        gap: 0.75rem;
+    }
+    
+    .star-letter {
+        width: 28px;
+        height: 28px;
+        font-size: 0.8rem;
+    }
+    
+    .star-info {
+        font-size: 0.9rem;
+    }
+}
+</style>
+
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    const skillItems = document.querySelectorAll('.skill-item');
+    const prevBtn = document.getElementById('prev-btn');
+    const nextBtn = document.getElementById('next-btn');
+    const currentStart = document.getElementById('current-start');
+    const currentEnd = document.getElementById('current-end');
+    
+    if (!skillItems.length || skillItems.length <= 5) {
+        return; // No pagination needed
+    }
+    
+    let currentPage = 0;
+    const itemsPerPage = 5;
+    const totalItems = skillItems.length;
+    const totalPages = Math.ceil(totalItems / itemsPerPage);
+    
+    function showPage(pageNum) {
+        // Hide all items
+        skillItems.forEach(item => {
+            item.style.display = 'none';
+        });
+        
+        // Show items for current page
+        const startIndex = pageNum * itemsPerPage;
+        const endIndex = Math.min(startIndex + itemsPerPage, totalItems);
+        
+        for (let i = startIndex; i < endIndex; i++) {
+            if (skillItems[i]) {
+                skillItems[i].style.display = 'flex';
+            }
+        }
+        
+        // Update pagination info
+        if (currentStart && currentEnd) {
+            currentStart.textContent = startIndex + 1;
+            currentEnd.textContent = endIndex;
+        }
+        
+        // Update button states
+        if (prevBtn) {
+            prevBtn.disabled = pageNum === 0;
+        }
+        if (nextBtn) {
+            nextBtn.disabled = pageNum === totalPages - 1;
+        }
+    }
+    
+    // Event listeners
+    if (prevBtn) {
+        prevBtn.addEventListener('click', function() {
+            if (currentPage > 0) {
+                currentPage--;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    if (nextBtn) {
+        nextBtn.addEventListener('click', function() {
+            if (currentPage < totalPages - 1) {
+                currentPage++;
+                showPage(currentPage);
+            }
+        });
+    }
+    
+    // Initialize first page
+    showPage(0);
+});
+
+// Global variables
+let currentSkill = '';
+// Extract job ID from URL
+let currentJobId = null;
+
+function getJobIdFromUrl() {
+    const path = window.location.pathname;
+    // Match pattern like /jobs/ba9a672b-43ba-4c78-8945-0de4ce2f986e/
+    const match = path.match(/\/jobs\/([^\/]+)\//);
+    return match ? match[1] : null;
+}
+
+// Initialize job ID
+currentJobId = getJobIdFromUrl();
+
+if (currentJobId) {
+    console.log("Job ID from URL:", currentJobId);
+} else {
+    console.error("Could not extract job ID from URL");
+}
+// Open modal and generate prompt
+async function openQuickExperienceModal(skillName) {
+    currentSkill = skillName;
+    
+    // Show modal
+    document.getElementById('quickExperienceModal').style.display = 'block';
+    document.getElementById('modalOverlay').style.display = 'block';
+    document.getElementById('modalSkillName').textContent = skillName;
+    document.getElementById('skillName').value = skillName;
+    document.body.style.overflow = 'hidden';
+    
+    // Show loading state
+    document.getElementById('modalLoading').style.display = 'block';
+    document.getElementById('modalForm').style.display = 'none';
+    document.getElementById('modalError').style.display = 'none';
+    
+    // Generate AI prompt
+    try {
+        const response = await fetch(`/jobs/${currentJobId}/generate-experience-prompt/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: JSON.stringify({
+                skill_name: skillName
+            })
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show the form with the generated prompt
+            document.getElementById('aiPrompt').innerHTML = data.prompt;
+            document.getElementById('modalLoading').style.display = 'none';
+            document.getElementById('modalForm').style.display = 'block';
+        } else {
+            throw new Error(data.message || 'Failed to generate prompt');
+        }
+    } catch (error) {
+        console.error('Error generating prompt:', error);
+        document.getElementById('modalLoading').style.display = 'none';
+        document.getElementById('modalError').style.display = 'block';
+        document.getElementById('errorMessage').textContent = error.message;
+    }
+}
+
+// Close modal
+function closeQuickExperienceModal() {
+    document.getElementById('quickExperienceModal').style.display = 'none';
+    document.getElementById('modalOverlay').style.display = 'none';
+    document.body.style.overflow = '';
+    
+    // Reset form
+    document.getElementById('quickExperienceForm').reset();
+    document.getElementById('experienceText').value = '';
+    updateWordCount();
+}
+
+// Show manual form (skip AI prompt)
+function showManualForm() {
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalForm').style.display = 'block';
+    document.getElementById('aiPrompt').innerHTML = `
+        <p><strong>Tell us about a time when you used ${currentSkill}:</strong></p>
+        <p>Please describe a specific situation where you demonstrated this skill. Include details about:</p>
+        <ul>
+            <li>The context or situation</li>
+            <li>What actions you took</li>
+            <li>The challenges you faced</li>
+            <li>The results or outcomes</li>
+        </ul>
+    `;
+}
+
+// Retry prompt generation
+async function retryPromptGeneration() {
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalLoading').style.display = 'block';
+    
+    // Wait a moment then retry
+    setTimeout(() => openQuickExperienceModal(currentSkill), 500);
+}
+
+document.getElementById('quickExperienceForm').addEventListener('submit', async function(e) {
+    e.preventDefault();
+    
+    const submitBtn = document.getElementById('submitBtn');
+    const btnText = submitBtn.querySelector('.btn-text');
+    const btnSpinner = submitBtn.querySelector('.btn-spinner');
+    
+    // Show loading state
+    submitBtn.disabled = true;
+    btnText.style.display = 'none';
+    btnSpinner.style.display = 'flex';
+    
+    try {
+        const formData = new FormData(this);
+        
+        const response = await fetch(`/jobs/${currentJobId}/quick-add-experience/`, {
+            method: 'POST',
+            headers: {
+                'X-CSRFToken': document.querySelector('[name=csrfmiddlewaretoken]').value
+            },
+            body: formData
+        });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            if (data.redirect_to_analysis) {
+                // Show success message and redirect to skill analysis
+                closeQuickExperienceModal();
+                
+                // Show a brief success message
+                showSuccessMessage(data.message || 'Experience created! Analyzing for additional skills...');
+                
+                // Redirect to skill analysis page
+                setTimeout(() => {
+                    window.location.href = data.analysis_url;
+                }, 1500);
+            } else {
+                // Fallback to simple success (if AI analysis is disabled)
+                alert('Experience added successfully!');
+                closeQuickExperienceModal();
+                location.reload();
+            }
+        } else {
+            throw new Error(data.message || 'Failed to add experience');
+        }
+    } catch (error) {
+        console.error('Error adding experience:', error);
+        alert('Error adding experience: ' + error.message);
+    } finally {
+        // Reset button state
+        submitBtn.disabled = false;
+        btnText.style.display = 'inline';
+        btnSpinner.style.display = 'none';
+    }
+});
+
+// Function to show success message
+function showSuccessMessage(message) {
+    // Create and show a temporary success message
+    const successDiv = document.createElement('div');
+    successDiv.className = 'success-toast';
+    successDiv.innerHTML = `
+        <div class="toast-content">
+            <span class="toast-icon">✅</span>
+            <span class="toast-message">${message}</span>
+        </div>
+    `;
+    
+    // Add styles for the toast
+    successDiv.style.cssText = `
+        position: fixed;
+        top: 20px;
+        right: 20px;
+        background: linear-gradient(135deg, #28a745, #20c997);
+        color: white;
+        padding: 1rem 1.5rem;
+        border-radius: 8px;
+        box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+        z-index: 10000;
+        animation: slideInRight 0.3s ease-out;
+    `;
+    
+    // Add animation styles to head if not already added
+    if (!document.querySelector('#toast-styles')) {
+        const styles = document.createElement('style');
+        styles.id = 'toast-styles';
+        styles.textContent = `
+            @keyframes slideInRight {
+                from {
+                    transform: translateX(100%);
+                    opacity: 0;
+                }
+                to {
+                    transform: translateX(0);
+                    opacity: 1;
+                }
+            }
+            .toast-content {
+                display: flex;
+                align-items: center;
+                gap: 0.5rem;
+            }
+            .toast-icon {
+                font-size: 1.2rem;
+            }
+            .toast-message {
+                font-weight: 500;
+            }
+        `;
+        document.head.appendChild(styles);
+    }
+    
+    // Add to page
+    document.body.appendChild(successDiv);
+    
+    // Remove after 3 seconds
+    setTimeout(() => {
+        successDiv.style.animation = 'slideInRight 0.3s ease-out reverse';
+        setTimeout(() => {
+            if (successDiv.parentNode) {
+                successDiv.parentNode.removeChild(successDiv);
+            }
+        }, 300);
+    }, 3000);
+}
+
+// Word count functionality
+function updateWordCount() {
+    const textarea = document.getElementById('experienceText');
+    const wordCount = document.querySelector('.word-count');
+    const words = textarea.value.trim().split(/\s+/).filter(word => word.length > 0);
+    wordCount.textContent = `${words.length} words`;
+}
+
+document.getElementById('experienceText').addEventListener('input', updateWordCount);
+
+// Voice input placeholder (for future implementation)
+function toggleVoiceInput() {
+    alert('Voice input coming soon!');
+}
+
+// Close modal on escape key
+document.addEventListener('keydown', function(e) {
+    if (e.key === 'Escape') {
+        closeQuickExperienceModal();
+    }
+});
+
+function toggleStarGuide() {
+    const content = document.getElementById('starGuideContent');
+    const icon = document.querySelector('.toggle-icon');
+    
+    if (content.style.display === 'none' || content.style.display === '') {
+        content.style.display = 'block';
+        icon.classList.add('expanded');
+        icon.textContent = '▼';
+    } else {
+        content.style.display = 'none';
+        icon.classList.remove('expanded');
+        icon.textContent = '▶';
+    }
+}
+
+// Update the showManualForm function to use shorter fallback
+function showManualForm() {
+    document.getElementById('modalError').style.display = 'none';
+    document.getElementById('modalForm').style.display = 'block';
+    document.getElementById('aiPrompt').innerHTML = `
+        <p>Tell us about a specific time when you used <strong>${currentSkill}</strong> professionally.</p>
+        <p>What was the challenge you faced, and what specific actions did you take to solve it?</p>
+    `;
+}
+
+</script>
+{% endblock %}

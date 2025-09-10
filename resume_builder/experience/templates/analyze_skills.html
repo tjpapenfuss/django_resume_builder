@@ -10,6 +10,18 @@
             <div class="experience-title">
                 <h2>{{ experience.title }}</h2>
                 <p>{{ experience.context_name }} • {{ experience.get_experience_type_display }}</p>
+                
+                <!-- Show context if this came from quick add -->
+                {% if from_quick_add and target_job_info %}
+                    <div class="source-context">
+                        <span class="context-badge">
+                            📝 Created for: {{ target_job_info.job_title }} at {{ target_job_info.company_name }}
+                        </span>
+                        <span class="context-skill">
+                            🎯 Target Skill: {{ target_job_info.skill_context }}
+                        </span>
+                    </div>
+                {% endif %}
             </div>
         </div>
     </div>
@@ -21,6 +33,13 @@
                 <span class="skill-count">{{ total_skills }} skills identified</span>
             </div>
             <p>Our AI analyzed your experience and identified the following skills. Review and select which ones you'd like to add to your profile.</p>
+            
+            <!-- Show additional context for quick add -->
+            {% if from_quick_add %}
+                <div class="quick-add-context">
+                    <p><strong>Note:</strong> After confirming skills, you'll return to the skill gap analysis to see your updated progress.</p>
+                </div>
+            {% endif %}
         </div>
     </div>
 
@@ -110,9 +129,17 @@
                 <button type="submit" name="action" value="skip" class="btn btn-secondary">
                     Skip Analysis & Continue
                 </button>
-                <a href="{% url 'experience:experience' %}" class="btn btn-outline">
-                    Cancel & Return to Experiences
-                </a>
+                
+                <!-- Contextual navigation based on source -->
+                {% if from_quick_add and target_job_info %}
+                    <a href="/jobs/{{ target_job_info.job_id }}/skill-gap/" class="btn btn-outline">
+                        Cancel & Return to Skill Gap Analysis
+                    </a>
+                {% else %}
+                    <a href="{% url 'experience:experience' %}" class="btn btn-outline">
+                        Cancel & Return to Experiences
+                    </a>
+                {% endif %}
             </div>
         </div>
     </form>
@@ -623,6 +650,89 @@
         gap: 0.5rem;
     }
 }
+
+.source-context {
+    margin-top: 1rem;
+    display: flex;
+    flex-wrap: wrap;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.context-badge, .context-skill {
+    background: linear-gradient(135deg, #e3f2fd, #bbdefb);
+    color: #1976d2;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    font-size: 0.9rem;
+    font-weight: 500;
+    border: 1px solid rgba(25, 118, 210, 0.2);
+}
+
+.context-skill {
+    background: linear-gradient(135deg, #f3e5f5, #e1bee7);
+    color: #7b1fa2;
+    border: 1px solid rgba(123, 31, 162, 0.2);
+}
+
+.quick-add-context {
+    margin-top: 1rem;
+    padding: 1rem;
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 8px;
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.quick-add-context p {
+    margin: 0;
+    font-size: 0.95rem;
+    opacity: 0.95;
+}
+
+/* Mobile responsive updates */
+@media (max-width: 768px) {
+    .source-context {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+    
+    .context-badge, .context-skill {
+        font-size: 0.8rem;
+        padding: 0.4rem 0.8rem;
+    }
+}
+
+/* All your existing styles remain the same */
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    text-align: center;
+    margin-bottom: 2rem;
+}
+
+.experience-info h1 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 2rem;
+}
+
+.experience-title h2 {
+    margin: 0 0 0.5rem 0;
+    color: #007bff;
+    font-size: 1.5rem;
+}
+
+.experience-title p {
+    margin: 0;
+    color: #666;
+    font-size: 1rem;
+}
+
 </style>
 
 <script>
