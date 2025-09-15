@@ -6,7 +6,6 @@ natural conversations for extracting detailed work experience information.
 """
 
 import openai
-import anthropic
 from django.conf import settings
 from typing import List, Dict, Optional, Tuple
 import json
@@ -27,7 +26,12 @@ class AIService:
             self.openai_client = openai.OpenAI(api_key=settings.OPENAI_API_KEY)
         
         if settings.ANTHROPIC_API_KEY:
-            self.anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            try:
+                import anthropic
+                self.anthropic_client = anthropic.Anthropic(api_key=settings.ANTHROPIC_API_KEY)
+            except ImportError:
+                logger.warning("Anthropic package not installed. Only OpenAI will be available.")
+                self.anthropic_client = None
     
     def get_system_prompt(self) -> str:
         """
@@ -83,7 +87,7 @@ Signal completion when you have enough detail to create a comprehensive summary.
 
 Remember: Your goal is to help users recognize and articulate the full value of their professional experiences."""
 
-    def generate_ai_response(self, messages: List[Dict], use_anthropic: bool = True) -> Tuple[str, Optional[Dict]]:
+    def generate_ai_response(self, messages: List[Dict], use_anthropic: bool = False) -> Tuple[str, Optional[Dict]]:
         """
         Generates AI response using available API
         
@@ -223,7 +227,7 @@ Please ensure all content is specific, quantifiable where possible, and professi
         ]
         
         try:
-            response_content, metadata = self.generate_ai_response(messages_for_summary, use_anthropic=True)
+            response_content, metadata = self.generate_ai_response(messages_for_summary, use_anthropic=False)
             
             # Try to parse JSON response
             try:
@@ -273,7 +277,7 @@ Respond with just the title, no additional text."""
         ]
         
         try:
-            response_content, _ = self.generate_ai_response(messages_for_title, use_anthropic=True)
+            response_content, _ = self.generate_ai_response(messages_for_title, use_anthropic=False)
             # Clean up the response - remove quotes and extra whitespace
             title = response_content.strip().strip('"\'').strip()
             
@@ -320,7 +324,7 @@ Respond in JSON format:
         ]
         
         try:
-            response_content, _ = self.generate_ai_response(messages_for_analysis, use_anthropic=True)
+            response_content, _ = self.generate_ai_response(messages_for_analysis, use_anthropic=False)
             analysis = json.loads(response_content)
             
             return analysis.get('should_complete', False), analysis.get('reasoning', 'Analysis unclear')
