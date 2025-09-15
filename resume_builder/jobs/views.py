@@ -355,6 +355,7 @@ def job_interview_assistant(request, pk):
         if job.ai_analysis:
             job_skills.extend(job.ai_required_skills)
             job_skills.extend(job.ai_preferred_skills)
+            job_skills.extend(job.ai_technologies)
         else:
             # Fallback to parsed requirements
             job_skills.extend(job.required_skills)
