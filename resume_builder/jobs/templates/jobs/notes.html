@@ -1,0 +1,770 @@
+{% extends 'base.html' %}
+
+{% block title %}Notes - {{ job.job_title }} at {{ job.company_name }}{% endblock %}
+
+{% block content %}
+<div class="container">
+    <div class="header">
+        <h1>Notes for {{ job.job_title }}</h1>
+        <p class="job-info">{{ job.company_name }}{% if job.location %} • {{ job.location }}{% endif %}</p>
+        <div class="header-actions">
+            <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-secondary">← Back to Dashboard</a>
+            <button id="add-note-btn" class="btn btn-primary">+ Add New Note</button>
+        </div>
+    </div>
+
+    {% if messages %}
+        {% for message in messages %}
+            <div class="alert alert-{{ message.tags }}">
+                {{ message }}
+            </div>
+        {% endfor %}
+    {% endif %}
+
+    <!-- Notes List -->
+    <div class="notes-section">
+        <div id="notes-list" class="notes-list">
+            <!-- Notes will be loaded here via JavaScript -->
+        </div>
+
+        <div id="empty-state" class="empty-state" style="display: none;">
+            <div class="empty-icon">📝</div>
+            <h3>No Notes Yet</h3>
+            <p>Start organizing your job application process by adding notes about interviews, research, follow-ups, and more.</p>
+            <button onclick="openNoteModal(null)" class="btn btn-primary">Add Your First Note</button>
+        </div>
+    </div>
+</div>
+
+<!-- Note Modal -->
+<div id="note-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="modal-title">Add New Note</h2>
+            <span class="close-btn" onclick="closeNoteModal()">&times;</span>
+        </div>
+
+        <form id="note-form">
+            <div class="form-group">
+                <label for="note-title">Title *</label>
+                <input type="text" id="note-title" name="title" required
+                       placeholder="e.g., Interview prep, Company research">
+            </div>
+
+            <div class="form-group">
+                <label for="note-category">Category</label>
+                <select id="note-category" name="category">
+                    <option value="interview_notes">Interview Notes</option>
+                    <option value="interview_prep">Interview Prep</option>
+                    <option value="research">Research</option>
+                    <option value="follow_up">Follow-up</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group textarea-group">
+                <label for="note-body">Content *</label>
+                <textarea id="note-body" name="body" required
+                          placeholder="Add your notes here..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" onclick="closeNoteModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <span id="save-btn-text">Save Note</span>
+                    <span id="save-btn-loading" style="display: none;">Saving...</span>
+                </button>
+                <button type="button" id="delete-btn" onclick="deleteNote()" class="btn btn-danger" style="display: none;">
+                    Delete Note
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<style>
+.container {
+    max-width: 1000px;
+    margin: 0 auto;
+    padding: 2rem 1rem;
+}
+
+.header {
+    margin-bottom: 2rem;
+    text-align: center;
+}
+
+.header h1 {
+    margin: 0 0 0.5rem 0;
+    color: #333;
+    font-size: 2rem;
+}
+
+.job-info {
+    margin: 0 0 1.5rem 0;
+    color: #666;
+    font-size: 1.1rem;
+}
+
+.header-actions {
+    display: flex;
+    justify-content: center;
+    gap: 1rem;
+    align-items: center;
+}
+
+.btn {
+    padding: 0.75rem 1.5rem;
+    border: none;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 0.95rem;
+    text-decoration: none;
+    display: inline-block;
+    transition: all 0.2s;
+    font-weight: 500;
+}
+
+.btn-primary {
+    background-color: #007bff;
+    color: white;
+}
+
+.btn-primary:hover {
+    background-color: #0056b3;
+    transform: translateY(-1px);
+}
+
+.btn-secondary {
+    background-color: #6c757d;
+    color: white;
+}
+
+.btn-secondary:hover {
+    background-color: #545b62;
+}
+
+.btn-danger {
+    background-color: #dc3545;
+    color: white;
+}
+
+.btn-danger:hover {
+    background-color: #c82333;
+}
+
+.alert {
+    padding: 0.75rem 1rem;
+    margin-bottom: 1rem;
+    border-radius: 4px;
+    border: 1px solid transparent;
+}
+
+.alert-success {
+    background-color: #d4edda;
+    border-color: #c3e6cb;
+    color: #155724;
+}
+
+.alert-error {
+    background-color: #f8d7da;
+    border-color: #f5c6cb;
+    color: #721c24;
+}
+
+.notes-section {
+    background: #fff;
+    border-radius: 8px;
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+    min-height: 400px;
+}
+
+.notes-list {
+    padding: 1.5rem;
+}
+
+.note-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+}
+
+.note-item:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.note-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.note-title {
+    font-size: 1.2rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 1rem 0 0;
+    flex: 1;
+}
+
+.note-category {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.category-interview_notes { background: #28a745; }
+.category-research { background: #17a2b8; }
+.category-follow_up { background: #ffc107; color: #333; }
+.category-other { background: #6c757d; }
+
+.note-body {
+    color: #555;
+    line-height: 1.6;
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+}
+
+.note-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.note-date {
+    font-style: italic;
+}
+
+.empty-state {
+    text-align: center;
+    padding: 4rem 2rem;
+    color: #666;
+}
+
+.empty-icon {
+    font-size: 4rem;
+    margin-bottom: 1rem;
+    opacity: 0.5;
+}
+
+.empty-state h3 {
+    margin: 0 0 1rem 0;
+    color: #333;
+    font-size: 1.5rem;
+}
+
+.empty-state p {
+    margin: 0 0 2rem 0;
+    font-size: 1.1rem;
+    max-width: 500px;
+    margin-left: auto;
+    margin-right: auto;
+}
+
+/* Modal Styles */
+.modal {
+    display: none;
+    position: fixed;
+    z-index: 1000;
+    left: 0;
+    top: 0;
+    width: 100%;
+    height: 100%;
+    background-color: rgba(0,0,0,0.5);
+    animation: fadeIn 0.2s ease;
+}
+
+@keyframes fadeIn {
+    from { opacity: 0; }
+    to { opacity: 1; }
+}
+
+.modal-content {
+    background-color: #fff;
+    margin: 2.5vh auto;
+    padding: 0;
+    border-radius: 8px;
+    width: 95%;
+    max-width: none;
+    min-width: 70%;
+    height: 95vh;
+    min-height: 70vh;
+    max-height: 95vh;
+    overflow-y: auto;
+    box-shadow: 0 4px 20px rgba(0,0,0,0.3);
+    animation: slideIn 0.3s ease;
+    display: flex;
+    flex-direction: column;
+}
+
+@keyframes slideIn {
+    from { transform: translateY(-50px); opacity: 0; }
+    to { transform: translateY(0); opacity: 1; }
+}
+
+.modal-header {
+    padding: 1.5rem 2rem;
+    border-bottom: 1px solid #e9ecef;
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-shrink: 0;
+}
+
+.modal-header h2 {
+    margin: 0;
+    color: #333;
+    font-size: 1.3rem;
+}
+
+.close-btn {
+    font-size: 1.5rem;
+    cursor: pointer;
+    color: #999;
+    transition: color 0.2s;
+}
+
+.close-btn:hover {
+    color: #333;
+}
+
+.form-group {
+    margin-bottom: 1.5rem;
+}
+
+.form-group label {
+    display: block;
+    margin-bottom: 0.5rem;
+    font-weight: 500;
+    color: #333;
+}
+
+.form-group input,
+.form-group select,
+.form-group textarea {
+    width: 100%;
+    padding: 0.75rem;
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    font-size: 0.95rem;
+    transition: border-color 0.2s;
+    box-sizing: border-box;
+}
+
+.form-group input:focus,
+.form-group select:focus,
+.form-group textarea:focus {
+    outline: none;
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
+.form-group textarea {
+    resize: vertical;
+    min-height: 200px;
+    font-family: inherit;
+}
+
+.form-group.textarea-group {
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.form-group.textarea-group textarea {
+    flex: 1;
+    min-height: 300px;
+    resize: none;
+}
+
+#note-form {
+    padding: 2rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.modal-actions {
+    display: flex;
+    gap: 1rem;
+    justify-content: flex-end;
+    margin-top: 2rem;
+    flex-shrink: 0;
+}
+
+/* Loading States */
+.loading {
+    text-align: center;
+    padding: 2rem;
+    color: #666;
+}
+
+.loading-spinner {
+    display: inline-block;
+    width: 20px;
+    height: 20px;
+    border: 2px solid #f3f3f3;
+    border-top: 2px solid #007bff;
+    border-radius: 50%;
+    animation: spin 1s linear infinite;
+    margin-right: 0.5rem;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .container {
+        padding: 1rem 0.5rem;
+    }
+
+    .header-actions {
+        flex-direction: column;
+        gap: 0.75rem;
+    }
+
+    .note-header {
+        flex-direction: column;
+        align-items: flex-start;
+        gap: 0.5rem;
+    }
+
+    .note-title {
+        margin-right: 0;
+    }
+
+    .modal-content {
+        width: 98%;
+        min-width: 90%;
+        margin: 1% auto;
+    }
+
+    .modal-header,
+    #note-form {
+        padding: 1.5rem;
+    }
+
+    .modal-actions {
+        flex-direction: column;
+    }
+
+    .modal-actions .btn {
+        width: 100%;
+        text-align: center;
+    }
+}
+
+@media (max-width: 480px) {
+    .header h1 {
+        font-size: 1.5rem;
+    }
+
+    .note-item {
+        padding: 1rem;
+    }
+
+    .modal-header,
+    #note-form {
+        padding: 1rem;
+    }
+}
+</style>
+
+<script>
+let currentNoteId = null;
+let notes = [];
+
+document.addEventListener('DOMContentLoaded', function() {
+    loadNotes();
+
+    // Add event listeners
+    document.getElementById('add-note-btn').addEventListener('click', () => openNoteModal());
+    document.getElementById('note-form').addEventListener('submit', saveNote);
+
+    // Close modal when clicking outside
+    document.getElementById('note-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeNoteModal();
+        }
+    });
+
+    // Close modal with Escape key
+    document.addEventListener('keydown', function(e) {
+        if (e.key === 'Escape' && document.getElementById('note-modal').style.display === 'block') {
+            closeNoteModal();
+        }
+    });
+});
+
+function loadNotes() {
+    const notesList = document.getElementById('notes-list');
+    const emptyState = document.getElementById('empty-state');
+
+    notesList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Loading notes...</div>';
+
+    fetch(`/jobs/api/jobs/{{ job.pk }}/notes/`, {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            notes = data.notes;
+            renderNotes();
+        } else {
+            notesList.innerHTML = '<div class="error">Error loading notes: ' + data.message + '</div>';
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        notesList.innerHTML = '<div class="error">Network error occurred while loading notes.</div>';
+    });
+}
+
+function renderNotes() {
+    const notesList = document.getElementById('notes-list');
+    const emptyState = document.getElementById('empty-state');
+
+    if (notes.length === 0) {
+        notesList.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    notesList.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    const notesHtml = notes.map(note => {
+        const categoryClass = `category-${note.category}`;
+        const categoryDisplay = note.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const createdDate = new Date(note.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric',
+            hour: '2-digit',
+            minute: '2-digit'
+        });
+        const updatedDate = note.updated_at !== note.created_at ?
+            new Date(note.updated_at).toLocaleDateString('en-US', {
+                year: 'numeric',
+                month: 'short',
+                day: 'numeric',
+                hour: '2-digit',
+                minute: '2-digit'
+            }) : null;
+
+        return `
+            <div class="note-item" data-note-id="${note.note_id}">
+                <div class="note-header">
+                    <h3 class="note-title">${escapeHtml(note.title)}</h3>
+                    <span class="note-category ${categoryClass}">${categoryDisplay}</span>
+                </div>
+                <div class="note-body">${escapeHtml(note.body.substring(0, 300))}${note.body.length > 300 ? '...' : ''}</div>
+                <div class="note-footer">
+                    <span class="note-date">
+                        Created: ${createdDate}
+                        ${updatedDate ? `<br>Updated: ${updatedDate}` : ''}
+                    </span>
+                    <span class="note-length">${note.body.length} characters</span>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    notesList.innerHTML = notesHtml;
+
+    // Add click event listeners to note items
+    const noteItems = notesList.querySelectorAll('.note-item');
+    noteItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            const noteId = this.dataset.noteId;
+            editNote(noteId);
+        });
+    });
+}
+
+function openNoteModal(noteId = null) {
+    const modal = document.getElementById('note-modal');
+    const modalTitle = document.getElementById('modal-title');
+    const form = document.getElementById('note-form');
+    const deleteBtn = document.getElementById('delete-btn');
+
+    currentNoteId = noteId;
+
+    if (noteId) {
+        // Edit mode
+        const note = notes.find(n => n.note_id === noteId);
+        if (note) {
+            modalTitle.textContent = 'Edit Note';
+            document.getElementById('note-title').value = note.title;
+            document.getElementById('note-category').value = note.category;
+            document.getElementById('note-body').value = note.body;
+            deleteBtn.style.display = 'inline-block';
+        }
+    } else {
+        // Add mode
+        modalTitle.textContent = 'Add New Note';
+        form.reset();
+        deleteBtn.style.display = 'none';
+    }
+
+    modal.style.display = 'block';
+    document.getElementById('note-title').focus();
+}
+
+function closeNoteModal() {
+    const modal = document.getElementById('note-modal');
+    modal.style.display = 'none';
+    currentNoteId = null;
+    document.getElementById('note-form').reset();
+}
+
+function editNote(noteId) {
+    if (!noteId) {
+        console.error('No note ID provided to editNote');
+        return;
+    }
+    openNoteModal(noteId);
+}
+
+function saveNote(event) {
+    event.preventDefault();
+
+    const title = document.getElementById('note-title').value.trim();
+    const category = document.getElementById('note-category').value;
+    const body = document.getElementById('note-body').value.trim();
+
+    if (!title || !body) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    const saveBtn = document.querySelector('#note-form button[type="submit"]');
+    const saveBtnText = document.getElementById('save-btn-text');
+    const saveBtnLoading = document.getElementById('save-btn-loading');
+
+    saveBtn.disabled = true;
+    saveBtnText.style.display = 'none';
+    saveBtnLoading.style.display = 'inline';
+
+    const url = currentNoteId ?
+        `/jobs/api/notes/${currentNoteId}/` :
+        `/jobs/api/jobs/{{ job.pk }}/notes/`;
+
+    const method = currentNoteId ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            category: category,
+            body: body
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeNoteModal();
+            loadNotes();
+            showAlert('success', data.message);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Network error occurred. Please try again.');
+    })
+    .finally(() => {
+        saveBtn.disabled = false;
+        saveBtnText.style.display = 'inline';
+        saveBtnLoading.style.display = 'none';
+    });
+}
+
+function deleteNote() {
+    if (!currentNoteId) return;
+
+    if (!confirm('Are you sure you want to delete this note? This action cannot be undone.')) {
+        return;
+    }
+
+    fetch(`/jobs/api/notes/${currentNoteId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeNoteModal();
+            loadNotes();
+            showAlert('success', data.message);
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Network error occurred. Please try again.');
+    });
+}
+
+function getCsrfToken() {
+    return document.querySelector('[name=csrfmiddlewaretoken]')?.value ||
+           document.querySelector('meta[name="csrf-token"]')?.getAttribute('content') ||
+           '{{ csrf_token }}';
+}
+
+function escapeHtml(text) {
+    const div = document.createElement('div');
+    div.textContent = text;
+    return div.innerHTML;
+}
+
+function showAlert(type, message) {
+    const alertDiv = document.createElement('div');
+    alertDiv.className = `alert alert-${type}`;
+    alertDiv.textContent = message;
+
+    const container = document.querySelector('.container');
+    const header = container.querySelector('.header');
+    container.insertBefore(alertDiv, header.nextSibling);
+
+    setTimeout(() => {
+        alertDiv.remove();
+    }, 5000);
+}
+</script>
+
+<!-- CSRF Token for AJAX requests -->
+<input type="hidden" name="csrfmiddlewaretoken" value="{{ csrf_token }}">
+
+{% endblock %}

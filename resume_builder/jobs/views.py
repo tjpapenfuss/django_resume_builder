@@ -701,3 +701,130 @@ def generate_improved_description(experience, ai_analysis):
         print(f"Error generating improved description: {str(e)}")
         return None
 
+
+# Notes API Views
+from rest_framework import status
+from rest_framework.decorators import api_view
+from rest_framework.response import Response
+from .models import Note
+from .serializers import NoteSerializer, NoteCreateSerializer
+
+
+@login_required
+def job_notes_page(request, pk):
+    """Display notes page for a specific job"""
+    job = get_object_or_404(JobPosting, pk=pk)
+
+    # Check if user has access to this job
+    application = JobApplication.objects.filter(
+        user=request.user,
+        job_posting=job
+    ).first()
+
+    if not application:
+        messages.error(request, 'You do not have access to this job')
+        return redirect('jobs:job_list')
+
+    context = {
+        'job': job,
+        'application': application,
+    }
+
+    return render(request, 'jobs/notes.html', context)
+
+
+@login_required
+@api_view(['GET', 'POST'])
+def job_notes_api(request, pk):
+    """
+    GET: Get all notes for a specific job
+    POST: Create new note for a job
+    """
+    try:
+        job = get_object_or_404(JobPosting, pk=pk)
+
+        # Check if user has access to this job
+        application = JobApplication.objects.filter(
+            user=request.user,
+            job_posting=job
+        ).first()
+
+        if not application:
+            return JsonResponse({
+                'success': False,
+                'message': 'You do not have access to this job'
+            }, status=403)
+
+        if request.method == 'GET':
+            notes = Note.objects.filter(job=job, user=request.user).order_by('-created_at')
+            serializer = NoteSerializer(notes, many=True)
+            return Response({
+                'success': True,
+                'notes': serializer.data
+            })
+
+        elif request.method == 'POST':
+            serializer = NoteCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                note = serializer.save(user=request.user, job=job)
+                response_serializer = NoteSerializer(note)
+                return Response({
+                    'success': True,
+                    'message': 'Note created successfully',
+                    'note': response_serializer.data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Validation error',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@login_required
+@api_view(['PUT', 'DELETE'])
+def note_detail_api(request, note_id):
+    """
+    PUT: Update existing note
+    DELETE: Delete note
+    """
+    try:
+        note = get_object_or_404(Note, note_id=note_id, user=request.user)
+
+        if request.method == 'PUT':
+            serializer = NoteCreateSerializer(note, data=request.data, partial=True)
+            if serializer.is_valid():
+                note = serializer.save()
+                response_serializer = NoteSerializer(note)
+                return Response({
+                    'success': True,
+                    'message': 'Note updated successfully',
+                    'note': response_serializer.data
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Validation error',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'DELETE':
+            note_title = note.title
+            note.delete()
+            return Response({
+                'success': True,
+                'message': f'Note "{note_title}" deleted successfully'
+            })
+
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+

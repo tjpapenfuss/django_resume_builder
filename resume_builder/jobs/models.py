@@ -265,3 +265,48 @@ class JobExperience(models.Model):
         # - Description keyword matches
         
         return round(skill_match_ratio * 100, 1)
+
+
+class Note(models.Model):
+    """Notes for job applications - interview notes, research, follow-up, etc."""
+
+    CATEGORY_CHOICES = [
+        ('interview_notes', 'Interview Notes'),
+        ('interview_prep', 'Interview Prep'),
+        ('research', 'Research'),
+        ('follow_up', 'Follow-up'),
+        ('other', 'Other'),
+    ]
+
+    note_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    job = models.ForeignKey(
+        JobPosting,
+        on_delete=models.CASCADE,
+        related_name='notes',
+        null=True,
+        blank=True,
+        help_text="Job this note relates to. Can be null for general notes."
+    )
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='job_notes'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']
+        indexes = [
+            models.Index(fields=['user', 'job']),
+            models.Index(fields=['user', 'category']),
+            models.Index(fields=['created_at']),
+        ]
+        db_table = 'job_note'
+
+    def __str__(self):
+        job_title = self.job.job_title if self.job else "General"
+        return f"{self.title} - {job_title} ({self.get_category_display()})"

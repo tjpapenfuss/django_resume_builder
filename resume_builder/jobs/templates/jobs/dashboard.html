@@ -124,11 +124,14 @@
                         
                         <div class="job-actions">
                             {% if application.job_posting.pk %}
-                                <a href="{% url 'jobs:job_detail' application.job_posting.pk %}" class="btn btn-sm btn-primary">
-                                    View Details
-                                </a>
-                                <a href="{% url 'jobs:job_interview_assistant' application.job_posting.pk %}" class="btn btn-sm btn-secondary">
+                                <a href="{% url 'jobs:job_interview_assistant' application.job_posting.pk %}" class="btn btn-sm btn-primary">
                                     Interview Prep
+                                </a>
+                                <a href="{% url 'jobs:job_notes_page' application.job_posting.pk %}" class="btn btn-sm btn-primary">
+                                    Notes
+                                </a>
+                                <a href="{% url 'jobs:job_detail' application.job_posting.pk %}" class="btn btn-sm btn-secondary">
+                                    View Details
                                 </a>
                             {% else %}
                                 <span class="btn btn-sm btn-secondary" style="opacity: 0.5; cursor: not-allowed;">

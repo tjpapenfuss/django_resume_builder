@@ -31,4 +31,9 @@ urlpatterns = [
 
     path('<uuid:pk>/generate-experience-prompt/', views.generate_experience_prompt, name='generate_experience_prompt'),
     path('<uuid:pk>/quick-add-experience/', quick_add_experience, name='quick_add_experience'),
+
+    # Notes page and API endpoints
+    path('<uuid:pk>/notes/', views.job_notes_page, name='job_notes_page'),
+    path('api/jobs/<uuid:pk>/notes/', views.job_notes_api, name='job_notes_api'),
+    path('api/notes/<uuid:note_id>/', views.note_detail_api, name='note_detail_api'),
 ]
