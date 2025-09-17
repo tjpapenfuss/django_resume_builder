@@ -310,3 +310,38 @@ class Note(models.Model):
     def __str__(self):
         job_title = self.job.job_title if self.job else "General"
         return f"{self.title} - {job_title} ({self.get_category_display()})"
+
+
+class NoteTemplate(models.Model):
+    """Templates for creating notes - reusable note structures for common use cases"""
+
+    CATEGORY_CHOICES = [
+        ('interview_notes', 'Interview Notes'),
+        ('interview_prep', 'Interview Prep'),
+        ('research', 'Research'),
+        ('follow_up', 'Follow-up'),
+        ('other', 'Other'),
+    ]
+
+    template_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
+    title = models.CharField(max_length=200)
+    body = models.TextField()
+    category = models.CharField(max_length=20, choices=CATEGORY_CHOICES, default='other')
+    user = models.ForeignKey(
+        settings.AUTH_USER_MODEL,
+        on_delete=models.CASCADE,
+        related_name='note_templates'
+    )
+    created_at = models.DateTimeField(auto_now_add=True)
+    updated_at = models.DateTimeField(auto_now=True)
+
+    class Meta:
+        ordering = ['-created_at']  # Newest first
+        indexes = [
+            models.Index(fields=['user', 'category']),
+            models.Index(fields=['created_at']),
+        ]
+        db_table = 'note_template'
+
+    def __str__(self):
+        return f"{self.title} ({self.get_category_display()})"

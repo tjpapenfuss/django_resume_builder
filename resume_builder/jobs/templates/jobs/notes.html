@@ -10,6 +10,7 @@
         <div class="header-actions">
             <a href="{% url 'jobs:job_dashboard' %}" class="btn btn-secondary">← Back to Dashboard</a>
             <button id="add-note-btn" class="btn btn-primary">+ Add New Note</button>
+            <button id="add-from-template-btn" class="btn btn-outline-primary">📝 From Template</button>
         </div>
     </div>
 
@@ -64,7 +65,8 @@
 
             <div class="form-group textarea-group">
                 <label for="note-body">Content *</label>
-                <textarea id="note-body" name="body" required
+                <div id="note-body-editor" class="rich-text-editor"></div>
+                <textarea id="note-body" name="body" required style="display: none;"
                           placeholder="Add your notes here..."></textarea>
             </div>
 
@@ -76,6 +78,78 @@
                 </button>
                 <button type="button" id="delete-btn" onclick="deleteNote()" class="btn btn-danger" style="display: none;">
                     Delete Note
+                </button>
+            </div>
+        </form>
+    </div>
+</div>
+
+<!-- Template Selection Modal -->
+<div id="template-selection-modal" class="modal">
+    <div class="modal-content template-selection-content">
+        <div class="modal-header">
+            <h2>Select Template</h2>
+            <span class="close-btn" onclick="closeTemplateSelectionModal()">&times;</span>
+        </div>
+
+        <div class="template-modal-body">
+            <button id="create-new-template-btn" class="btn btn-primary" onclick="openTemplateModal()">+ Create New Template</button>
+
+            <div id="templates-list" class="templates-list">
+                <!-- Templates will be loaded here via JavaScript -->
+            </div>
+
+            <div id="templates-empty-state" class="empty-state" style="display: none;">
+                <div class="empty-icon">📝</div>
+                <h3>No Templates Yet</h3>
+                <p>Create reusable note templates to speed up your job application process.</p>
+                <button onclick="openTemplateModal()" class="btn btn-primary">Create Your First Template</button>
+            </div>
+        </div>
+    </div>
+</div>
+
+<!-- Template Create/Edit Modal -->
+<div id="template-modal" class="modal">
+    <div class="modal-content">
+        <div class="modal-header">
+            <h2 id="template-modal-title">Create New Template</h2>
+            <span class="close-btn" onclick="closeTemplateModal()">&times;</span>
+        </div>
+
+        <form id="template-form">
+            <div class="form-group">
+                <label for="template-title">Title *</label>
+                <input type="text" id="template-title" name="title" required
+                       placeholder="e.g., Interview prep questions, Company research template">
+            </div>
+
+            <div class="form-group">
+                <label for="template-category">Category</label>
+                <select id="template-category" name="category">
+                    <option value="interview_notes">Interview Notes</option>
+                    <option value="interview_prep">Interview Prep</option>
+                    <option value="research">Research</option>
+                    <option value="follow_up">Follow-up</option>
+                    <option value="other">Other</option>
+                </select>
+            </div>
+
+            <div class="form-group textarea-group">
+                <label for="template-body">Template Content *</label>
+                <div id="template-body-editor" class="rich-text-editor"></div>
+                <textarea id="template-body" name="body" required style="display: none;"
+                          placeholder="Add your template content here..."></textarea>
+            </div>
+
+            <div class="modal-actions">
+                <button type="button" onclick="closeTemplateModal()" class="btn btn-secondary">Cancel</button>
+                <button type="submit" class="btn btn-primary">
+                    <span id="template-save-btn-text">Save Template</span>
+                    <span id="template-save-btn-loading" style="display: none;">Saving...</span>
+                </button>
+                <button type="button" id="template-delete-btn" onclick="deleteTemplate()" class="btn btn-danger" style="display: none;">
+                    Delete Template
                 </button>
             </div>
         </form>
@@ -142,6 +216,17 @@
 
 .btn-secondary:hover {
     background-color: #545b62;
+}
+
+.btn-outline-primary {
+    background-color: transparent;
+    color: #007bff;
+    border: 2px solid #007bff;
+}
+
+.btn-outline-primary:hover {
+    background-color: #007bff;
+    color: white;
 }
 
 .btn-danger {
@@ -225,6 +310,7 @@
 }
 
 .category-interview_notes { background: #28a745; }
+.category-interview_prep { background: #fd7e14; }
 .category-research { background: #17a2b8; }
 .category-follow_up { background: #ffc107; color: #333; }
 .category-other { background: #6c757d; }
@@ -430,6 +516,177 @@
     100% { transform: rotate(360deg); }
 }
 
+/* Template Styles */
+.template-selection-content {
+    max-width: 800px;
+    max-height: 90vh;
+}
+
+.template-modal-body {
+    padding: 2rem;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 0;
+}
+
+.templates-list {
+    margin-top: 1.5rem;
+    flex: 1;
+    overflow-y: auto;
+}
+
+.template-item {
+    background: #f8f9fa;
+    border: 1px solid #e9ecef;
+    border-radius: 8px;
+    padding: 1.5rem;
+    margin-bottom: 1rem;
+    transition: all 0.2s;
+    cursor: pointer;
+    position: relative;
+}
+
+.template-item:hover {
+    background: #e9ecef;
+    transform: translateY(-1px);
+    box-shadow: 0 2px 8px rgba(0,0,0,0.1);
+}
+
+.template-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: flex-start;
+    margin-bottom: 0.75rem;
+}
+
+.template-title {
+    font-size: 1.1rem;
+    font-weight: 600;
+    color: #333;
+    margin: 0 1rem 0 0;
+    flex: 1;
+}
+
+.template-category {
+    background: #007bff;
+    color: white;
+    padding: 0.25rem 0.75rem;
+    border-radius: 12px;
+    font-size: 0.8rem;
+    font-weight: 500;
+    text-transform: capitalize;
+}
+
+.template-body-preview {
+    color: #555;
+    line-height: 1.5;
+    margin-bottom: 0.75rem;
+    white-space: pre-wrap;
+    font-size: 0.9rem;
+}
+
+.template-footer {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    font-size: 0.85rem;
+    color: #888;
+}
+
+.template-actions {
+    display: flex;
+    gap: 0.5rem;
+}
+
+.template-action-btn {
+    background: none;
+    border: none;
+    padding: 0.25rem 0.5rem;
+    border-radius: 4px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    transition: all 0.2s;
+}
+
+.template-action-btn:hover {
+    background: rgba(0,0,0,0.1);
+}
+
+.template-edit-btn {
+    color: #007bff;
+}
+
+.template-delete-btn {
+    color: #dc3545;
+}
+
+.template-date {
+    font-style: italic;
+}
+
+/* Rich Text Editor Styles */
+.rich-text-editor {
+    border: 1px solid #ced4da;
+    border-radius: 4px;
+    background: white;
+    flex: 1;
+    display: flex;
+    flex-direction: column;
+    min-height: 300px;
+}
+
+.rich-text-editor .ql-toolbar {
+    border-bottom: 1px solid #ced4da;
+    border-top: none;
+    border-left: none;
+    border-right: none;
+    border-radius: 4px 4px 0 0;
+    background: #f8f9fa;
+    padding: 8px 12px;
+}
+
+.rich-text-editor .ql-container {
+    border: none;
+    flex: 1;
+    font-family: inherit;
+    font-size: 0.95rem;
+    border-radius: 0 0 4px 4px;
+}
+
+.rich-text-editor .ql-editor {
+    min-height: 250px;
+    padding: 12px 15px;
+    line-height: 1.6;
+}
+
+.rich-text-editor .ql-editor.ql-blank::before {
+    color: #999;
+    font-style: italic;
+}
+
+.rich-text-editor .ql-toolbar .ql-stroke {
+    stroke: #333;
+}
+
+.rich-text-editor .ql-toolbar .ql-fill {
+    fill: #333;
+}
+
+.rich-text-editor .ql-toolbar button:hover {
+    background: rgba(0,123,255,0.1);
+}
+
+.rich-text-editor .ql-toolbar button.ql-active {
+    background: rgba(0,123,255,0.2);
+    color: #007bff;
+}
+
+.rich-text-editor:focus-within {
+    border-color: #007bff;
+    box-shadow: 0 0 0 2px rgba(0,123,255,0.25);
+}
+
 /* Responsive Design */
 @media (max-width: 768px) {
     .container {
@@ -488,16 +745,27 @@
 }
 </style>
 
+<!-- Quill.js Rich Text Editor -->
+<link href="https://cdn.quilljs.com/1.3.6/quill.snow.css" rel="stylesheet">
+<script src="https://cdn.quilljs.com/1.3.6/quill.min.js"></script>
+
 <script>
 let currentNoteId = null;
 let notes = [];
+let currentTemplateId = null;
+let templates = [];
+let noteEditor = null;
+let templateEditor = null;
 
 document.addEventListener('DOMContentLoaded', function() {
+    initializeRichTextEditors();
     loadNotes();
 
     // Add event listeners
     document.getElementById('add-note-btn').addEventListener('click', () => openNoteModal());
+    document.getElementById('add-from-template-btn').addEventListener('click', () => openTemplateSelectionModal());
     document.getElementById('note-form').addEventListener('submit', saveNote);
+    document.getElementById('template-form').addEventListener('submit', saveTemplate);
 
     // Close modal when clicking outside
     document.getElementById('note-modal').addEventListener('click', function(e) {
@@ -506,13 +774,70 @@ document.addEventListener('DOMContentLoaded', function() {
         }
     });
 
-    // Close modal with Escape key
+    document.getElementById('template-selection-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTemplateSelectionModal();
+        }
+    });
+
+    document.getElementById('template-modal').addEventListener('click', function(e) {
+        if (e.target === this) {
+            closeTemplateModal();
+        }
+    });
+
+    // Close modals with Escape key
     document.addEventListener('keydown', function(e) {
-        if (e.key === 'Escape' && document.getElementById('note-modal').style.display === 'block') {
-            closeNoteModal();
+        if (e.key === 'Escape') {
+            if (document.getElementById('note-modal').style.display === 'block') {
+                closeNoteModal();
+            } else if (document.getElementById('template-selection-modal').style.display === 'block') {
+                closeTemplateSelectionModal();
+            } else if (document.getElementById('template-modal').style.display === 'block') {
+                closeTemplateModal();
+            }
         }
     });
 });
+
+function initializeRichTextEditors() {
+    // Configure Quill toolbar
+    const toolbarOptions = [
+        [{ 'header': [1, 2, 3, false] }],
+        ['bold', 'italic', 'underline'],
+        [{ 'list': 'ordered'}, { 'list': 'bullet' }],
+        [{ 'indent': '-1'}, { 'indent': '+1' }],
+        ['link'],
+        ['clean']
+    ];
+
+    // Initialize note editor
+    noteEditor = new Quill('#note-body-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: toolbarOptions
+        },
+        placeholder: 'Add your notes here...'
+    });
+
+    // Initialize template editor
+    templateEditor = new Quill('#template-body-editor', {
+        theme: 'snow',
+        modules: {
+            toolbar: toolbarOptions
+        },
+        placeholder: 'Add your template content here...'
+    });
+
+    // Sync editor content with hidden textareas
+    noteEditor.on('text-change', function() {
+        document.getElementById('note-body').value = noteEditor.root.innerHTML;
+    });
+
+    templateEditor.on('text-change', function() {
+        document.getElementById('template-body').value = templateEditor.root.innerHTML;
+    });
+}
 
 function loadNotes() {
     const notesList = document.getElementById('notes-list');
@@ -580,7 +905,7 @@ function renderNotes() {
                     <h3 class="note-title">${escapeHtml(note.title)}</h3>
                     <span class="note-category ${categoryClass}">${categoryDisplay}</span>
                 </div>
-                <div class="note-body">${escapeHtml(note.body.substring(0, 300))}${note.body.length > 300 ? '...' : ''}</div>
+                <div class="note-body">${note.body.substring(0, 300)}${note.body.length > 300 ? '...' : ''}</div>
                 <div class="note-footer">
                     <span class="note-date">
                         Created: ${createdDate}
@@ -619,6 +944,7 @@ function openNoteModal(noteId = null) {
             modalTitle.textContent = 'Edit Note';
             document.getElementById('note-title').value = note.title;
             document.getElementById('note-category').value = note.category;
+            noteEditor.root.innerHTML = note.body;
             document.getElementById('note-body').value = note.body;
             deleteBtn.style.display = 'inline-block';
         }
@@ -626,6 +952,7 @@ function openNoteModal(noteId = null) {
         // Add mode
         modalTitle.textContent = 'Add New Note';
         form.reset();
+        noteEditor.setContents([]);
         deleteBtn.style.display = 'none';
     }
 
@@ -638,6 +965,7 @@ function closeNoteModal() {
     modal.style.display = 'none';
     currentNoteId = null;
     document.getElementById('note-form').reset();
+    noteEditor.setContents([]);
 }
 
 function editNote(noteId) {
@@ -653,9 +981,11 @@ function saveNote(event) {
 
     const title = document.getElementById('note-title').value.trim();
     const category = document.getElementById('note-category').value;
-    const body = document.getElementById('note-body').value.trim();
+    const body = noteEditor.root.innerHTML.trim();
 
-    if (!title || !body) {
+    // Check if content is empty (Quill produces <p><br></p> when empty)
+    const textContent = noteEditor.getText().trim();
+    if (!title || !textContent) {
         alert('Please fill in all required fields.');
         return;
     }
@@ -761,6 +1091,274 @@ function showAlert(type, message) {
     setTimeout(() => {
         alertDiv.remove();
     }, 5000);
+}
+
+// Template Functions
+
+function loadTemplates() {
+    return fetch('/jobs/api/templates/', {
+        method: 'GET',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            templates = data.templates;
+            return templates;
+        } else {
+            throw new Error(data.message);
+        }
+    });
+}
+
+function openTemplateSelectionModal() {
+    const modal = document.getElementById('template-selection-modal');
+    const templatesList = document.getElementById('templates-list');
+    const emptyState = document.getElementById('templates-empty-state');
+
+    templatesList.innerHTML = '<div class="loading"><div class="loading-spinner"></div>Loading templates...</div>';
+    modal.style.display = 'block';
+
+    loadTemplates()
+        .then(templates => {
+            renderTemplates();
+        })
+        .catch(error => {
+            console.error('Error:', error);
+            templatesList.innerHTML = '<div class="error">Error loading templates: ' + error.message + '</div>';
+        });
+}
+
+function renderTemplates() {
+    const templatesList = document.getElementById('templates-list');
+    const emptyState = document.getElementById('templates-empty-state');
+
+    if (templates.length === 0) {
+        templatesList.style.display = 'none';
+        emptyState.style.display = 'block';
+        return;
+    }
+
+    templatesList.style.display = 'block';
+    emptyState.style.display = 'none';
+
+    const templatesHtml = templates.map(template => {
+        const categoryClass = `category-${template.category}`;
+        const categoryDisplay = template.category.replace('_', ' ').replace(/\b\w/g, l => l.toUpperCase());
+        const createdDate = new Date(template.created_at).toLocaleDateString('en-US', {
+            year: 'numeric',
+            month: 'short',
+            day: 'numeric'
+        });
+
+        return `
+            <div class="template-item" data-template-id="${template.template_id}">
+                <div class="template-header">
+                    <h3 class="template-title">${escapeHtml(template.title)}</h3>
+                    <span class="template-category ${categoryClass}">${categoryDisplay}</span>
+                </div>
+                <div class="template-body-preview">${template.body.substring(0, 200)}${template.body.length > 200 ? '...' : ''}</div>
+                <div class="template-footer">
+                    <span class="template-date">Created: ${createdDate}</span>
+                    <div class="template-actions">
+                        <button class="template-action-btn template-edit-btn" onclick="editTemplate('${template.template_id}')">✏️ Edit</button>
+                        <button class="template-action-btn template-delete-btn" onclick="deleteTemplateConfirm('${template.template_id}')">🗑️ Delete</button>
+                    </div>
+                </div>
+            </div>
+        `;
+    }).join('');
+
+    templatesList.innerHTML = templatesHtml;
+
+    // Add click event listeners to template items
+    const templateItems = templatesList.querySelectorAll('.template-item');
+    templateItems.forEach(item => {
+        item.addEventListener('click', function(e) {
+            // Don't trigger if clicking on action buttons
+            if (e.target.classList.contains('template-action-btn')) {
+                return;
+            }
+            const templateId = this.dataset.templateId;
+            useTemplate(templateId);
+        });
+    });
+}
+
+function useTemplate(templateId) {
+    const template = templates.find(t => t.template_id === templateId);
+    if (!template) {
+        console.error('Template not found:', templateId);
+        return;
+    }
+
+    // Close template selection modal
+    closeTemplateSelectionModal();
+
+    // Open note modal with template data pre-filled
+    openNoteModal();
+    document.getElementById('note-title').value = template.title;
+    document.getElementById('note-category').value = template.category;
+    noteEditor.root.innerHTML = template.body;
+    document.getElementById('note-body').value = template.body;
+}
+
+function closeTemplateSelectionModal() {
+    const modal = document.getElementById('template-selection-modal');
+    modal.style.display = 'none';
+}
+
+function openTemplateModal(templateId = null) {
+    const modal = document.getElementById('template-modal');
+    const modalTitle = document.getElementById('template-modal-title');
+    const form = document.getElementById('template-form');
+    const deleteBtn = document.getElementById('template-delete-btn');
+
+    currentTemplateId = templateId;
+
+    if (templateId) {
+        // Edit mode
+        const template = templates.find(t => t.template_id === templateId);
+        if (template) {
+            modalTitle.textContent = 'Edit Template';
+            document.getElementById('template-title').value = template.title;
+            document.getElementById('template-category').value = template.category;
+            templateEditor.root.innerHTML = template.body;
+            document.getElementById('template-body').value = template.body;
+            deleteBtn.style.display = 'inline-block';
+        }
+    } else {
+        // Create mode
+        modalTitle.textContent = 'Create New Template';
+        form.reset();
+        templateEditor.setContents([]);
+        deleteBtn.style.display = 'none';
+    }
+
+    // Close template selection modal if open
+    closeTemplateSelectionModal();
+    modal.style.display = 'block';
+    document.getElementById('template-title').focus();
+}
+
+function closeTemplateModal() {
+    const modal = document.getElementById('template-modal');
+    modal.style.display = 'none';
+    currentTemplateId = null;
+    document.getElementById('template-form').reset();
+    templateEditor.setContents([]);
+}
+
+function editTemplate(templateId) {
+    openTemplateModal(templateId);
+}
+
+function saveTemplate(event) {
+    event.preventDefault();
+
+    const title = document.getElementById('template-title').value.trim();
+    const category = document.getElementById('template-category').value;
+    const body = templateEditor.root.innerHTML.trim();
+
+    // Check if content is empty (Quill produces <p><br></p> when empty)
+    const textContent = templateEditor.getText().trim();
+    if (!title || !textContent) {
+        alert('Please fill in all required fields.');
+        return;
+    }
+
+    const saveBtn = document.querySelector('#template-form button[type="submit"]');
+    const saveBtnText = document.getElementById('template-save-btn-text');
+    const saveBtnLoading = document.getElementById('template-save-btn-loading');
+
+    saveBtn.disabled = true;
+    saveBtnText.style.display = 'none';
+    saveBtnLoading.style.display = 'inline';
+
+    const url = currentTemplateId ?
+        `/jobs/api/templates/${currentTemplateId}/` :
+        '/jobs/api/templates/';
+
+    const method = currentTemplateId ? 'PUT' : 'POST';
+
+    fetch(url, {
+        method: method,
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+        body: JSON.stringify({
+            title: title,
+            category: category,
+            body: body
+        })
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            closeTemplateModal();
+            showAlert('success', data.message);
+            // Reload templates if template selection modal is open
+            if (document.getElementById('template-selection-modal').style.display === 'block') {
+                loadTemplates().then(() => renderTemplates());
+            }
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Network error occurred. Please try again.');
+    })
+    .finally(() => {
+        saveBtn.disabled = false;
+        saveBtnText.style.display = 'inline';
+        saveBtnLoading.style.display = 'none';
+    });
+}
+
+function deleteTemplateConfirm(templateId) {
+    const template = templates.find(t => t.template_id === templateId);
+    if (!template) return;
+
+    if (!confirm(`Are you sure you want to delete the template "${template.title}"? This action cannot be undone.`)) {
+        return;
+    }
+
+    deleteTemplate(templateId);
+}
+
+function deleteTemplate(templateId = null) {
+    const deleteId = templateId || currentTemplateId;
+    if (!deleteId) return;
+
+    fetch(`/jobs/api/templates/${deleteId}/`, {
+        method: 'DELETE',
+        headers: {
+            'X-CSRFToken': getCsrfToken(),
+            'Content-Type': 'application/json',
+        },
+    })
+    .then(response => response.json())
+    .then(data => {
+        if (data.success) {
+            if (currentTemplateId === deleteId) {
+                closeTemplateModal();
+            }
+            showAlert('success', data.message);
+            // Reload templates
+            loadTemplates().then(() => renderTemplates());
+        } else {
+            alert('Error: ' + data.message);
+        }
+    })
+    .catch(error => {
+        console.error('Error:', error);
+        alert('Network error occurred. Please try again.');
+    });
 }
 </script>
 

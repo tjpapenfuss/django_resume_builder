@@ -706,8 +706,8 @@ def generate_improved_description(experience, ai_analysis):
 from rest_framework import status
 from rest_framework.decorators import api_view
 from rest_framework.response import Response
-from .models import Note
-from .serializers import NoteSerializer, NoteCreateSerializer
+from .models import Note, NoteTemplate
+from .serializers import NoteSerializer, NoteCreateSerializer, NoteTemplateSerializer, NoteTemplateCreateSerializer
 
 
 @login_required
@@ -820,6 +820,90 @@ def note_detail_api(request, note_id):
             return Response({
                 'success': True,
                 'message': f'Note "{note_title}" deleted successfully'
+            })
+
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+# Note Template API Views
+
+@login_required
+@api_view(['GET', 'POST'])
+def note_templates_api(request):
+    """
+    GET: Get all templates for the current user
+    POST: Create new template
+    """
+    try:
+        if request.method == 'GET':
+            templates = NoteTemplate.objects.filter(user=request.user).order_by('-created_at')
+            serializer = NoteTemplateSerializer(templates, many=True)
+            return Response({
+                'success': True,
+                'templates': serializer.data
+            })
+
+        elif request.method == 'POST':
+            serializer = NoteTemplateCreateSerializer(data=request.data)
+            if serializer.is_valid():
+                template = serializer.save(user=request.user)
+                response_serializer = NoteTemplateSerializer(template)
+                return Response({
+                    'success': True,
+                    'message': 'Template created successfully',
+                    'template': response_serializer.data
+                }, status=status.HTTP_201_CREATED)
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Validation error',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+    except Exception as e:
+        return Response({
+            'success': False,
+            'message': f'Error: {str(e)}'
+        }, status=status.HTTP_500_INTERNAL_SERVER_ERROR)
+
+
+@login_required
+@api_view(['PUT', 'DELETE'])
+def note_template_detail_api(request, template_id):
+    """
+    PUT: Update existing template
+    DELETE: Delete template
+    """
+    try:
+        template = get_object_or_404(NoteTemplate, template_id=template_id, user=request.user)
+
+        if request.method == 'PUT':
+            serializer = NoteTemplateCreateSerializer(template, data=request.data, partial=True)
+            if serializer.is_valid():
+                template = serializer.save()
+                response_serializer = NoteTemplateSerializer(template)
+                return Response({
+                    'success': True,
+                    'message': 'Template updated successfully',
+                    'template': response_serializer.data
+                })
+            else:
+                return Response({
+                    'success': False,
+                    'message': 'Validation error',
+                    'errors': serializer.errors
+                }, status=status.HTTP_400_BAD_REQUEST)
+
+        elif request.method == 'DELETE':
+            template_title = template.title
+            template.delete()
+            return Response({
+                'success': True,
+                'message': f'Template "{template_title}" deleted successfully'
             })
 
     except Exception as e:

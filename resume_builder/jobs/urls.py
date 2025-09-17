@@ -36,4 +36,8 @@ urlpatterns = [
     path('<uuid:pk>/notes/', views.job_notes_page, name='job_notes_page'),
     path('api/jobs/<uuid:pk>/notes/', views.job_notes_api, name='job_notes_api'),
     path('api/notes/<uuid:note_id>/', views.note_detail_api, name='note_detail_api'),
+
+    # Note Template API endpoints
+    path('api/templates/', views.note_templates_api, name='note_templates_api'),
+    path('api/templates/<uuid:template_id>/', views.note_template_detail_api, name='note_template_detail_api'),
 ]
