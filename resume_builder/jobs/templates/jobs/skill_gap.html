@@ -149,16 +149,28 @@
                 <h2>Add Experience for <span id="modalSkillName"></span></h2>
                 <button class="modal-close" onclick="closeQuickExperienceModal()">&times;</button>
             </div>
-            
+
+            <!-- Tab Navigation -->
+            <div class="modal-tabs">
+                <button class="tab-btn active" onclick="switchTab('quickEntry')" id="quickEntryTab">
+                    📝 Quick Entry
+                </button>
+                <button class="tab-btn" onclick="switchTab('conversation')" id="conversationTab">
+                    🤖 Conversation Assistant
+                </button>
+            </div>
+
             <div class="modal-body">
                 <!-- Loading state -->
                 <div id="modalLoading" class="loading-state">
                     <div class="spinner"></div>
                     <p>Generating personalized prompt...</p>
                 </div>
-                
-                <!-- Form content -->
-                <div id="modalForm" style="display: none;">
+
+                <!-- Quick Entry Tab Content -->
+                <div id="quickEntryContent" class="tab-content active">
+                    <!-- Form content -->
+                    <div id="modalForm" style="display: none;">
                     <form id="quickExperienceForm">
                         {% csrf_token %}
                         <input type="hidden" id="skillName" name="skill_name" value="">
@@ -246,14 +258,61 @@
                             </button>
                         </div>
                     </form>
+                    </div>
+
+                    <!-- Error state -->
+                    <div id="modalError" style="display: none;" class="error-state">
+                        <h3>Unable to Generate Prompt</h3>
+                        <p id="errorMessage">There was an error generating the personalized prompt. You can still add your experience manually.</p>
+                        <button class="btn btn-secondary" onclick="showManualForm()">Continue Manually</button>
+                        <button class="btn btn-primary" onclick="retryPromptGeneration()">Try Again</button>
+                    </div>
                 </div>
-                
-                <!-- Error state -->
-                <div id="modalError" style="display: none;" class="error-state">
-                    <h3>Unable to Generate Prompt</h3>
-                    <p id="errorMessage">There was an error generating the personalized prompt. You can still add your experience manually.</p>
-                    <button class="btn btn-secondary" onclick="showManualForm()">Continue Manually</button>
-                    <button class="btn btn-primary" onclick="retryPromptGeneration()">Try Again</button>
+
+                <!-- Conversation Tab Content -->
+                <div id="conversationContent" class="tab-content">
+                    <!-- Conversation loading state -->
+                    <div id="conversationLoading" class="loading-state" style="display: none;">
+                        <div class="spinner"></div>
+                        <p>Starting conversation for <span id="conversationSkillName"></span>...</p>
+                    </div>
+
+                    <!-- Conversation interface -->
+                    <div id="conversationInterface" style="display: none;">
+                        <div class="conversation-controls">
+                            <button class="control-btn pause-btn" onclick="pauseSkillConversation()" disabled id="pauseConversationBtn">
+                                <span class="btn-icon">⏸️</span>
+                                Pause
+                            </button>
+                            <button class="control-btn experience-btn" onclick="completeSkillConversation()" disabled id="completeConversationBtn">
+                                <span class="btn-icon">💼</span>
+                                Complete & Add Experience
+                            </button>
+                        </div>
+
+                        <div id="conversationMessages" class="conversation-messages">
+                            <div class="welcome-message">
+                                <div class="welcome-icon">💭</div>
+                                <p>Starting conversation about your experience with <strong><span id="skillNameDisplay"></span></strong>...</p>
+                            </div>
+                        </div>
+
+                        <div class="conversation-input">
+                            <input type="text" id="conversationMessageInput" placeholder="Type your response here..." disabled>
+                            <button id="sendConversationBtn" onclick="sendConversationMessage()" disabled>
+                                <span class="btn-icon">📤</span>
+                                Send
+                            </button>
+                        </div>
+                    </div>
+
+                    <!-- Conversation error state -->
+                    <div id="conversationError" style="display: none;" class="error-state">
+                        <h3>Unable to Start Conversation</h3>
+                        <p id="conversationErrorMessage">There was an error starting the conversation. Please try again.</p>
+                        <button class="btn btn-primary" onclick="retryConversation()">Try Again</button>
+                        <button class="btn btn-secondary" onclick="switchTab('quickEntry')">Use Quick Entry Instead</button>
+                    </div>
                 </div>
             </div>
         </div>
@@ -768,6 +827,55 @@
     background: rgba(255, 255, 255, 0.2);
 }
 
+/* Modal Tabs */
+.modal-tabs {
+    display: flex;
+    background: #f8f9fa;
+    border-bottom: 1px solid #dee2e6;
+}
+
+.tab-btn {
+    flex: 1;
+    background: none;
+    border: none;
+    padding: 1rem 1.5rem;
+    cursor: pointer;
+    font-size: 1rem;
+    font-weight: 500;
+    color: #6c757d;
+    transition: all 0.3s ease;
+    position: relative;
+}
+
+.tab-btn.active {
+    color: #667eea;
+    background: white;
+}
+
+.tab-btn.active::after {
+    content: '';
+    position: absolute;
+    bottom: 0;
+    left: 0;
+    right: 0;
+    height: 3px;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+}
+
+.tab-btn:hover:not(.active) {
+    background: #e9ecef;
+    color: #495057;
+}
+
+/* Tab Content */
+.tab-content {
+    display: none;
+}
+
+.tab-content.active {
+    display: block;
+}
+
 .modal-body {
     padding: 2rem;
 }
@@ -1106,6 +1214,187 @@
         font-size: 0.9rem;
     }
 }
+
+/* Conversation Interface Styles */
+.conversation-controls {
+    display: flex;
+    gap: 0.75rem;
+    margin-bottom: 1.5rem;
+    flex-wrap: wrap;
+    justify-content: center;
+}
+
+.control-btn {
+    display: flex;
+    align-items: center;
+    gap: 0.5rem;
+    padding: 0.6rem 1rem;
+    border: none;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    text-decoration: none;
+    color: white;
+    box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+}
+
+.control-btn:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none !important;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.control-btn:not(:disabled):hover {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(0, 0, 0, 0.2);
+}
+
+.start-btn {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+}
+
+.pause-btn {
+    background: linear-gradient(135deg, #ffc107 0%, #fd7e14 100%);
+    color: #333;
+}
+
+.experience-btn {
+    background: linear-gradient(135deg, #e83e8c 0%, #fd7e14 100%);
+}
+
+.btn-icon {
+    font-size: 1rem;
+}
+
+.conversation-messages {
+    height: 300px;
+    overflow-y: auto;
+    border: 2px solid #e9ecef;
+    border-radius: 10px;
+    padding: 1rem;
+    margin-bottom: 1rem;
+    background: linear-gradient(135deg, #fafafa 0%, #f8f9fa 100%);
+}
+
+.welcome-message {
+    text-align: center;
+    color: #6c757d;
+    padding: 1.5rem;
+}
+
+.welcome-icon {
+    font-size: 2.5rem;
+    margin-bottom: 0.5rem;
+}
+
+.conversation-message {
+    margin-bottom: 1rem;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    max-width: 85%;
+    position: relative;
+    word-wrap: break-word;
+}
+
+.user-message {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    margin-left: auto;
+    text-align: right;
+    border-bottom-right-radius: 4px;
+}
+
+.assistant-message {
+    background: white;
+    color: #333;
+    border: 1px solid #e9ecef;
+    border-bottom-left-radius: 4px;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+.conversation-input {
+    display: flex;
+    gap: 0.75rem;
+    align-items: center;
+}
+
+.conversation-input input[type="text"] {
+    flex: 1;
+    padding: 0.75rem;
+    border: 2px solid #e9ecef;
+    border-radius: 8px;
+    font-size: 0.9rem;
+    transition: border-color 0.3s ease;
+    background: white;
+}
+
+.conversation-input input[type="text"]:focus {
+    outline: none;
+    border-color: #667eea;
+    box-shadow: 0 0 0 2px rgba(102, 126, 234, 0.1);
+}
+
+.conversation-input button {
+    display: flex;
+    align-items: center;
+    gap: 0.4rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 0.75rem 1rem;
+    border-radius: 8px;
+    cursor: pointer;
+    font-size: 0.9rem;
+    font-weight: 600;
+    transition: all 0.3s ease;
+    box-shadow: 0 2px 8px rgba(102, 126, 234, 0.3);
+}
+
+.conversation-input button:hover:not(:disabled) {
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(102, 126, 234, 0.4);
+}
+
+.conversation-input button:disabled {
+    opacity: 0.6;
+    cursor: not-allowed;
+    transform: none;
+    box-shadow: 0 1px 3px rgba(0, 0, 0, 0.1);
+}
+
+/* Mobile responsive for conversation */
+@media (max-width: 768px) {
+    .conversation-controls {
+        justify-content: center;
+    }
+
+    .control-btn {
+        padding: 0.5rem 0.8rem;
+        font-size: 0.8rem;
+    }
+
+    .conversation-input {
+        flex-direction: column;
+        gap: 0.5rem;
+    }
+
+    .conversation-input input,
+    .conversation-input button {
+        width: 100%;
+    }
+
+    .conversation-messages {
+        height: 250px;
+    }
+
+    .tab-btn {
+        padding: 0.75rem 1rem;
+        font-size: 0.9rem;
+    }
+}
 </style>
 
 <script>
@@ -1199,22 +1488,45 @@ if (currentJobId) {
 } else {
     console.error("Could not extract job ID from URL");
 }
+// Tab switching functionality
+function switchTab(tabName) {
+    // Update tab buttons
+    document.querySelectorAll('.tab-btn').forEach(btn => btn.classList.remove('active'));
+    document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+
+    if (tabName === 'quickEntry') {
+        document.getElementById('quickEntryTab').classList.add('active');
+        document.getElementById('quickEntryContent').classList.add('active');
+    } else if (tabName === 'conversation') {
+        document.getElementById('conversationTab').classList.add('active');
+        document.getElementById('conversationContent').classList.add('active');
+
+        // Auto-start conversation when switching to this tab
+        if (!skillConversationId) {
+            startSkillConversationAutomatic();
+        }
+    }
+}
+
 // Open modal and generate prompt
 async function openQuickExperienceModal(skillName) {
     currentSkill = skillName;
-    
+
     // Show modal
     document.getElementById('quickExperienceModal').style.display = 'block';
     document.getElementById('modalOverlay').style.display = 'block';
     document.getElementById('modalSkillName').textContent = skillName;
     document.getElementById('skillName').value = skillName;
     document.body.style.overflow = 'hidden';
-    
+
+    // Reset to Quick Entry tab by default
+    switchTab('quickEntry');
+
     // Show loading state
     document.getElementById('modalLoading').style.display = 'block';
     document.getElementById('modalForm').style.display = 'none';
     document.getElementById('modalError').style.display = 'none';
-    
+
     // Generate AI prompt
     try {
         const response = await fetch(`/jobs/${currentJobId}/generate-experience-prompt/`, {
@@ -1227,9 +1539,9 @@ async function openQuickExperienceModal(skillName) {
                 skill_name: skillName
             })
         });
-        
+
         const data = await response.json();
-        
+
         if (data.success) {
             // Show the form with the generated prompt
             document.getElementById('aiPrompt').innerHTML = data.prompt;
@@ -1246,16 +1558,299 @@ async function openQuickExperienceModal(skillName) {
     }
 }
 
+// Conversation variables
+let skillConversationId = null;
+
+// Get CSRF token for Django
+function getCookie(name) {
+    let cookieValue = null;
+    if (document.cookie && document.cookie !== '') {
+        const cookies = document.cookie.split(';');
+        for (let i = 0; i < cookies.length; i++) {
+            const cookie = cookies[i].trim();
+            if (cookie.substring(0, name.length + 1) === (name + '=')) {
+                cookieValue = decodeURIComponent(cookie.substring(name.length + 1));
+                break;
+            }
+        }
+    }
+    return cookieValue;
+}
+
+const csrfToken = getCookie('csrftoken');
+
+// Display conversation message
+function displayConversationMessage(role, content, timestamp = null) {
+    const messagesContainer = document.getElementById('conversationMessages');
+
+    // Remove welcome message if it exists
+    const welcomeMessage = messagesContainer.querySelector('.welcome-message');
+    if (welcomeMessage) {
+        welcomeMessage.remove();
+    }
+
+    const messageDiv = document.createElement('div');
+    messageDiv.className = `conversation-message ${role}-message`;
+
+    let timeStr = '';
+    if (timestamp) {
+        const time = new Date(timestamp).toLocaleTimeString();
+        timeStr = ` <small style="opacity: 0.7;">(${time})</small>`;
+    }
+
+    messageDiv.innerHTML = `${content}${timeStr}`;
+    messagesContainer.appendChild(messageDiv);
+    messagesContainer.scrollTop = messagesContainer.scrollHeight;
+}
+
+// Show conversation error
+function showConversationError(message) {
+    document.getElementById('conversationError').style.display = 'block';
+    document.getElementById('conversationInterface').style.display = 'none';
+    document.getElementById('conversationErrorMessage').textContent = message;
+}
+
+// Start skill-specific conversation automatically using the generated prompt
+async function startSkillConversationAutomatic() {
+    try {
+        // Show conversation interface and loading
+        document.getElementById('conversationInterface').style.display = 'block';
+        document.getElementById('conversationLoading').style.display = 'block';
+        document.getElementById('skillNameDisplay').textContent = currentSkill;
+        document.getElementById('conversationSkillName').textContent = currentSkill;
+
+        const response = await fetch('/conversations/start/', {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({
+                skill_context: currentSkill,
+                job_context: currentJobId
+            })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            skillConversationId = data.conversation_id;
+
+            // Clear previous messages
+            document.getElementById('conversationMessages').innerHTML = '';
+
+            // Use the already generated AI prompt as the first message
+            const aiPromptElement = document.getElementById('aiPrompt');
+            let firstMessage = '';
+
+            if (aiPromptElement && aiPromptElement.innerHTML.trim()) {
+                // Extract text content from the AI prompt, removing HTML tags
+                const tempDiv = document.createElement('div');
+                tempDiv.innerHTML = aiPromptElement.innerHTML;
+                firstMessage = tempDiv.textContent || tempDiv.innerText || '';
+                // Clean up and add conversation context
+                firstMessage = `Great! Let's explore your experience with **${currentSkill}**.\n\n${firstMessage}`;
+            } else {
+                // Fallback if no prompt is available
+                firstMessage = `Great! Let's explore your experience with **${currentSkill}**. ${data.initial_message}`;
+            }
+
+            displayConversationMessage('assistant', firstMessage);
+
+            // Enable controls
+            document.getElementById('conversationMessageInput').disabled = false;
+            document.getElementById('sendConversationBtn').disabled = false;
+            document.getElementById('pauseConversationBtn').disabled = false;
+            document.getElementById('completeConversationBtn').disabled = false;
+
+            // Focus on message input
+            document.getElementById('conversationMessageInput').focus();
+        } else {
+            showConversationError(data.error || 'Failed to start conversation');
+        }
+    } catch (error) {
+        console.error('Error starting conversation:', error);
+        showConversationError('Failed to start conversation: ' + error.message);
+    } finally {
+        document.getElementById('conversationLoading').style.display = 'none';
+    }
+}
+
+// Legacy function kept for error recovery
+async function startSkillConversation() {
+    await startSkillConversationAutomatic();
+}
+
+// Send conversation message
+async function sendConversationMessage() {
+    if (!skillConversationId) return;
+
+    const messageInput = document.getElementById('conversationMessageInput');
+    const message = messageInput.value.trim();
+
+    if (!message) return;
+
+    // Display user message immediately
+    displayConversationMessage('user', message);
+    messageInput.value = '';
+
+    // Disable send button while processing
+    const sendBtn = document.getElementById('sendConversationBtn');
+    const originalContent = sendBtn.innerHTML;
+    sendBtn.innerHTML = '<span class="btn-icon">⏳</span>Thinking...';
+    sendBtn.disabled = true;
+
+    try {
+        const response = await fetch(`/conversations/${skillConversationId}/message/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ content: message })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            // Display AI response
+            displayConversationMessage('assistant', data.ai_response);
+        } else {
+            showConversationError(data.error || 'Failed to send message');
+        }
+    } catch (error) {
+        console.error('Error sending message:', error);
+        showConversationError('Failed to send message: ' + error.message);
+    }
+
+    // Re-enable send button
+    sendBtn.innerHTML = originalContent;
+    sendBtn.disabled = false;
+    messageInput.focus();
+}
+
+// Pause skill conversation
+async function pauseSkillConversation() {
+    if (!skillConversationId) return;
+
+    try {
+        const response = await fetch(`/conversations/${skillConversationId}/pause/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ action: 'pause' })
+        });
+
+        const data = await response.json();
+
+        if (data.success) {
+            displayConversationMessage('assistant', '⏸️ Conversation paused. You can resume anytime by sending a new message.');
+        } else {
+            showConversationError(data.error || 'Failed to pause conversation');
+        }
+    } catch (error) {
+        console.error('Error pausing conversation:', error);
+        showConversationError('Failed to pause conversation: ' + error.message);
+    }
+}
+
+// Complete skill conversation and create experience
+async function completeSkillConversation() {
+    if (!skillConversationId) return;
+
+    try {
+        displayConversationMessage('assistant', '⏳ Completing conversation and creating experience entry...');
+
+        const completeResponse = await fetch(`/conversations/${skillConversationId}/complete/`, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json',
+                'X-CSRFToken': csrfToken
+            },
+            body: JSON.stringify({ user_approved: true })
+        });
+
+        const completeData = await completeResponse.json();
+
+        if (completeData.success) {
+            displayConversationMessage('assistant', '✅ Conversation completed! Redirecting to create experience...');
+
+            // Disable controls
+            document.getElementById('conversationMessageInput').disabled = true;
+            document.getElementById('sendConversationBtn').disabled = true;
+            document.getElementById('pauseConversationBtn').disabled = true;
+            document.getElementById('completeConversationBtn').disabled = true;
+
+            // Short delay then redirect to create experience page
+            setTimeout(() => {
+                window.location.href = `/conversations/${skillConversationId}/create-experience/`;
+            }, 1500);
+        } else {
+            showConversationError('Failed to complete conversation: ' + completeData.error);
+        }
+    } catch (error) {
+        console.error('Error completing conversation:', error);
+        showConversationError('Failed to complete conversation: ' + error.message);
+    }
+}
+
+// Retry conversation
+function retryConversation() {
+    document.getElementById('conversationError').style.display = 'none';
+
+    // Reset conversation state and auto-start again
+    skillConversationId = null;
+    document.getElementById('conversationMessageInput').disabled = true;
+    document.getElementById('sendConversationBtn').disabled = true;
+    document.getElementById('pauseConversationBtn').disabled = true;
+    document.getElementById('completeConversationBtn').disabled = true;
+
+    // Auto-start conversation again
+    startSkillConversationAutomatic();
+}
+
+// Handle Enter key in conversation input
+document.addEventListener('DOMContentLoaded', function() {
+    const conversationInput = document.getElementById('conversationMessageInput');
+    if (conversationInput) {
+        conversationInput.addEventListener('keypress', function(event) {
+            if (event.key === 'Enter' && !event.shiftKey) {
+                event.preventDefault();
+                sendConversationMessage();
+            }
+        });
+    }
+});
+
 // Close modal
 function closeQuickExperienceModal() {
     document.getElementById('quickExperienceModal').style.display = 'none';
     document.getElementById('modalOverlay').style.display = 'none';
     document.body.style.overflow = '';
-    
+
     // Reset form
     document.getElementById('quickExperienceForm').reset();
     document.getElementById('experienceText').value = '';
     updateWordCount();
+
+    // Reset conversation state
+    skillConversationId = null;
+    document.getElementById('conversationMessages').innerHTML = `
+        <div class="welcome-message">
+            <div class="welcome-icon">💭</div>
+            <p>Starting conversation about your experience with <strong><span id="skillNameDisplay"></span></strong>...</p>
+        </div>
+    `;
+    document.getElementById('conversationError').style.display = 'none';
+    document.getElementById('conversationInterface').style.display = 'none';
+
+    // Reset buttons
+    document.getElementById('conversationMessageInput').disabled = true;
+    document.getElementById('sendConversationBtn').disabled = true;
+    document.getElementById('pauseConversationBtn').disabled = true;
+    document.getElementById('completeConversationBtn').disabled = true;
 }
 
 // Show manual form (skip AI prompt)
