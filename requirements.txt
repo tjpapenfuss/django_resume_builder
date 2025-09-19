@@ -10,3 +10,5 @@ beautifulsoup4>=4.11.0
 lxml>=4.9.0  # Better HTML parsing
 openai
 anthropic
+gunicorn==20.1.0 
+whitenoise==6.4.0
