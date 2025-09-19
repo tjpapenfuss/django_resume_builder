@@ -9,7 +9,10 @@
         <p>Manage and organize your work, education, and other experience entries</p>
         <div class="header-actions">
             <a href="{% url 'experience:add_experience' %}" class="btn btn-primary">
-                + Add New Experience
+                📝 Manually Add Experience
+            </a>
+            <a href="{% url 'conversation:experience_assistant' %}" class="btn btn-secondary">
+                🤖 Experience Adding Assistant
             </a>
         </div>
     </div>
@@ -254,6 +257,10 @@
 
 .header-actions {
     margin-top: 1rem;
+    display: flex;
+    gap: 1rem;
+    justify-content: center;
+    flex-wrap: wrap;
 }
 
 .alert {
@@ -675,7 +682,12 @@
     .container {
         padding: 1rem 0.5rem;
     }
-    
+
+    .header-actions {
+        flex-direction: column;
+        align-items: stretch;
+    }
+
     .card-actions {
         flex-direction: row;
         justify-content: space-between;

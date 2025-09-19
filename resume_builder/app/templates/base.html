@@ -641,52 +641,39 @@
         <div class="nav-menu">
             <!-- Main Navigation -->
             <div class="nav-section">
-                <div class="nav-section-title">Navigation</div>
-                <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
-                    <span class="nav-item-icon">🏠</span>Home
+                <div class="nav-section-title">Main</div>
+                <a href="{% url 'jobs:job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
+                    <span class="nav-item-icon">📊</span>Dashboard
                 </a>
-                {% if user.is_authenticated %}
-                    <a href="{% url 'profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
-                        <span class="nav-item-icon">👤</span>Profile
-                    </a>
-                {% endif %}
+                <a href="{% url 'experience:experience' %}" class="nav-item {% if request.resolver_match.url_name == 'experience' %}active{% endif %}">
+                    <span class="nav-item-icon">💼</span>Experience
+                </a>
             </div>
 
             {% if user.is_authenticated %}
 
-            <!-- Job Section Building -->
+            <!-- Other Tools -->
             <div class="nav-section">
-                <div class="nav-section-title">Job Section</div>
-                <a href="{% url 'jobs:job_dashboard' %}" class="nav-item {% if request.resolver_match.url_name == 'job_dashboard' %}active{% endif %}">
-                    <span class="nav-item-icon">🎓</span>Job Dashboard
-                </a>
-                <a href="{% url 'jobs:job_list' %}" class="nav-item {% if request.resolver_match.url_name == 'job_list' %}active{% endif %}">
-                    <span class="nav-item-icon">💼</span>Job List
-                </a>
-            </div>
-            
-            <!-- Resume Building -->
-            <div class="nav-section">
-                <div class="nav-section-title">Resume Building</div>
+                <div class="nav-section-title">Tools</div>
                 <a href="{% url 'employment:employment' %}" class="nav-item {% if request.resolver_match.url_name == 'add_employment' %}active{% endif %}">
-                    <span class="nav-item-icon">💼</span>Add Employment
+                    <span class="nav-item-icon">🏢</span>Add Employment
                 </a>
                 <a href="{% url 'education:education' %}" class="nav-item {% if request.resolver_match.url_name == 'add_education' %}active{% endif %}">
-                    <span class="nav-item-icon">🎓</span>Add Education
-                </a>
-                <a href="{% url 'experience:experience' %}" class="nav-item {% if request.resolver_match.url_name == 'add_experience' %}active{% endif %}">
-                    <span class="nav-item-icon">🎓</span>Add Experience
+                    <span class="nav-item-icon">🎓</span>Education
                 </a>
                 <a href="{% url 'skills:skills' %}" class="nav-item {% if request.resolver_match.url_name == 'add_skill' %}active{% endif %}">
-                    <span class="nav-item-icon">🛠️</span>Add Skills
+                    <span class="nav-item-icon">🛠️</span>View Skills
                 </a>
-                <!-- Taking out achievements / certifications for now. Will add back later.  
-                    <a href="#" class="nav-item">
-                    <span class="nav-item-icon">🏆</span>Add Achievements
-                </a> -->
+                <a href="{% url 'home' %}" class="nav-item {% if request.resolver_match.url_name == 'home' %}active{% endif %}">
+                    <span class="nav-item-icon">🏠</span>Home
+                </a>
+                <a href="{% url 'profile' %}" class="nav-item {% if request.resolver_match.url_name == 'profile' %}active{% endif %}">
+                    <span class="nav-item-icon">👤</span>Profile
+                </a>
             </div>
 
-            <!-- Resume Management -->
+            <!-- Resume Management - Commented out for now while working on other features -->
+            <!--
             <div class="nav-section">
                 <div class="nav-section-title">Resume Management</div>
                 <a href="#" class="nav-item">
@@ -702,6 +689,7 @@
                     <span class="nav-item-icon">🎨</span>Templates
                 </a>
             </div>
+            -->
 
             <!-- Account -->
             <div class="nav-section">

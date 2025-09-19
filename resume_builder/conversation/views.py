@@ -310,24 +310,32 @@ def conversation_test_page(request):
 
 
 @login_required
+def experience_assistant_page(request):
+    """Enhanced experience assistant page with improved styling"""
+    return render(request, 'conversation/experience_assistant.html', {
+        'user': request.user
+    })
+
+
+@login_required
 def create_experience_from_conversation(request, conversation_id):
     """
     Redirect to add experience page with conversation ID
-    
+
     GET /conversations/{conversation_id}/create-experience/
     """
     try:
         # Verify conversation belongs to user
         from .models import Conversation
         conversation = Conversation.objects.get(
-            conversation_id=conversation_id, 
+            conversation_id=conversation_id,
             user=request.user
         )
-        
+
         # Redirect to add experience page with conversation_id parameter
         add_experience_url = reverse('experience:add_experience')
         return redirect(f"{add_experience_url}?conversation_id={conversation_id}")
-        
+
     except Conversation.DoesNotExist:
         messages.error(request, 'Conversation not found or access denied.')
         return redirect('conversation:list_conversations')

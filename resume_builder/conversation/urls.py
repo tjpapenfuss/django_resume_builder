@@ -19,5 +19,8 @@ urlpatterns = [
     path('', views.list_user_conversations, name='list_conversations'),
     
     # Test page
-    path('test/', views.conversation_test_page, name='test_page'),
+    path('test/', views.conversation_test_page, name='test_conversation'),
+
+    # Experience Assistant page
+    path('experience-assistant/', views.experience_assistant_page, name='experience_assistant'),
 ]
