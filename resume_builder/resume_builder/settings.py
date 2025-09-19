@@ -31,9 +31,9 @@ OPENAI_API_KEY = os.getenv('OPENAI_API_KEY', None)
 ANTHROPIC_API_KEY = os.getenv('ANTHROPIC_API_KEY', None) 
 
 # SECURITY WARNING: don't run with debug turned on in production!
-DEBUG = True
+DEBUG = False
 
-ALLOWED_HOSTS = [".awsapprunner.com", "localhost", "127.0.0.1"]
+ALLOWED_HOSTS = ["3.20.224.10", "django.tannerpapenfuss.com", "localhost", "127.0.0.1"]
 
 
 # Application definition
@@ -149,17 +149,16 @@ USE_TZ = True
 
 STATIC_URL = 'static/'
 
-# Adding this in to deploy to AWS App runner.
-STATIC_ROOT = BASE_DIR / "staticfiles"
-
-STORAGES = {
-    "default": {
-        "BACKEND": "django.core.files.storage.FileSystemStorage",
-    },
-    "staticfiles": {
-        "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
-    },
-}
+# Adding this in to deploy to EC2.
+STATIC_ROOT = os.path.join(BASE_DIR, 'staticfiles')
+# STORAGES = {
+#     "default": {
+#         "BACKEND": "django.core.files.storage.FileSystemStorage",
+#     },
+#     "staticfiles": {
+#         "BACKEND": "whitenoise.storage.CompressedManifestStaticFilesStorage",
+#     },
+# }
 
 # Default primary key field type
 # https://docs.djangoproject.com/en/5.2/ref/settings/#default-auto-field
