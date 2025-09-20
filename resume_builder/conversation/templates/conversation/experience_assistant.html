@@ -9,37 +9,74 @@
         <p>Let our AI assistant help you extract and organize your professional experiences through a guided conversation.</p>
     </div>
 
-    <div class="assistant-intro">
-        <div class="intro-card">
-            <div class="intro-icon">💬</div>
-            <h3>How it works</h3>
-            <ul>
-                <li>Start a conversation about your work experience</li>
-                <li>Our AI will ask follow-up questions to gather details</li>
-                <li>We'll help you structure and refine your experience entries</li>
-                <li>Save polished experiences directly to your profile</li>
-            </ul>
+    {% if is_resumed and experience %}
+    <!-- Resumed Conversation Context -->
+    <div class="resumed-conversation-intro">
+        <div class="resumed-card">
+            <h3>Conversation Resumed</h3>
+            <div class="resumed-collapsible-header" onclick="toggleResumedDetails()">
+                <span class="resumed-details-text">Adding more context to: <strong>"{{ experience.title }}"</strong></span>
+                <span class="toggle-icon" id="resumedToggle">▼</span>
+            </div>
+            <div class="resumed-collapsible-content" id="resumedContent" style="display: none;">
+                <div class="resumed-experience-context">
+                    <p>{{ experience.description|truncatewords:30 }}</p>
+                    <div class="resumed-instructions">
+                        <p>Continue your conversation to add more details, mention additional skills you used, or elaborate on any aspect of this experience.</p>
+                    </div>
+                </div>
+            </div>
         </div>
     </div>
+    {% else %}
+    <div class="assistant-intro">
+        <div class="how-it-works-minimal">
+            <div class="collapsible-header" onclick="toggleHowItWorks()">
+                <span class="how-it-works-text">How it works</span>
+                <span class="toggle-icon" id="howItWorksToggle">▼</span>
+            </div>
+            <div class="collapsible-content" id="howItWorksContent" style="display: none;">
+                <ul>
+                    <li>Start a conversation about your work experience</li>
+                    <li>Our AI will ask follow-up questions to gather details</li>
+                    <li>We'll help you structure and refine your experience entries</li>
+                    <li>Save polished experiences directly to your profile</li>
+                </ul>
+            </div>
+        </div>
+    </div>
+    {% endif %}
 
     <div class="chat-container">
         <div class="chat-header">
-            <h2>Start Your Experience Conversation</h2>
-            <p>Welcome, {{ user.first_name|default:"there" }}! Ready to build your experience portfolio?</p>
+            {% if is_resumed and experience %}
+                <h2>Continue Your Experience Conversation</h2>
+                <p>Welcome back, {{ user.first_name|default:"there" }}! Ready to add more details to "{{ experience.title }}"?</p>
+            {% else %}
+                <h2>Start Your Experience Conversation</h2>
+                <p>Welcome, {{ user.first_name|default:"there" }}! Ready to build your experience portfolio?</p>
+            {% endif %}
         </div>
 
         <div class="conversation-controls">
-            <button class="control-btn start-btn" onclick="startNewConversation()">
-                <span class="btn-icon">🚀</span>
-                Start New Conversation
-            </button>
+            {% if is_resumed and conversation %}
+                <button class="control-btn start-btn" onclick="loadResumedConversation('{{ conversation.conversation_id }}')" disabled>
+                    <span class="btn-icon">🔄</span>
+                    Loading History...
+                </button>
+            {% else %}
+                <button class="control-btn start-btn" onclick="startNewConversation()" disabled>
+                    <span class="btn-icon">🚀</span>
+                    Starting Conversation...
+                </button>
+            {% endif %}
             <button class="control-btn pause-btn" onclick="pauseConversation()" disabled>
                 <span class="btn-icon">⏸️</span>
                 Pause
             </button>
             <button class="control-btn experience-btn" onclick="createExperience()" disabled>
                 <span class="btn-icon">💼</span>
-                Complete & Create Experience
+                {% if is_resumed %}Update Experience{% else %}Complete & Create Experience{% endif %}
             </button>
             <button class="control-btn status-btn" onclick="getStatus()" disabled>
                 <span class="btn-icon">ℹ️</span>
@@ -53,7 +90,11 @@
         <div id="chat-messages" class="chat-messages">
             <div class="welcome-message">
                 <div class="welcome-icon">👋</div>
-                <p>Click "Start New Conversation" above to begin extracting your experience details with AI assistance.</p>
+                {% if is_resumed and conversation %}
+                    <p>Loading your conversation history...</p>
+                {% else %}
+                    <p>Starting your conversation automatically...</p>
+                {% endif %}
             </div>
         </div>
 
@@ -153,6 +194,174 @@
     position: absolute;
     left: 0;
     top: 0.5rem;
+}
+
+/* Minimal How It Works */
+.how-it-works-minimal {
+    text-align: center;
+    margin-bottom: 1rem;
+}
+
+.collapsible-header {
+    display: inline-flex;
+    align-items: center;
+    gap: 0.5rem;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    user-select: none;
+    padding: 0.5rem 1rem;
+    border-radius: 20px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+}
+
+.collapsible-header:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.how-it-works-text {
+    font-size: 0.9rem;
+    font-weight: 500;
+    color: #666;
+}
+
+.toggle-icon {
+    font-size: 0.8rem;
+    transition: transform 0.3s ease;
+    color: #666;
+}
+
+.toggle-icon.expanded {
+    transform: rotate(180deg);
+}
+
+.collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    max-height: 0;
+    text-align: left;
+    margin: 0 auto;
+    max-width: 400px;
+}
+
+.collapsible-content.expanded {
+    opacity: 1;
+    max-height: 200px;
+    margin-top: 1rem;
+}
+
+.collapsible-content ul {
+    list-style: none;
+    padding: 0;
+    margin: 0;
+    background: rgba(255, 255, 255, 0.05);
+    border-radius: 8px;
+    padding: 1rem;
+}
+
+.collapsible-content li {
+    padding: 0.3rem 0;
+    font-size: 0.85rem;
+    color: #666;
+    position: relative;
+    padding-left: 1.5rem;
+}
+
+.collapsible-content li:before {
+    content: "•";
+    position: absolute;
+    left: 0;
+    color: #667eea;
+    font-weight: bold;
+}
+
+/* Resumed Conversation Styles */
+.resumed-conversation-intro {
+    margin-bottom: 2rem;
+}
+
+.resumed-card {
+    background: linear-gradient(135deg, #28a745 0%, #20c997 100%);
+    color: white;
+    padding: 2rem;
+    border-radius: 15px;
+    box-shadow: 0 10px 25px rgba(40, 167, 69, 0.3);
+    text-align: center;
+}
+
+.resumed-card h3 {
+    margin: 0 0 1rem 0;
+    font-size: 1.5rem;
+    font-weight: 600;
+}
+
+.resumed-collapsible-header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    cursor: pointer;
+    transition: opacity 0.3s ease;
+    user-select: none;
+    padding: 0.75rem 1rem;
+    border-radius: 10px;
+    background: rgba(255, 255, 255, 0.1);
+    backdrop-filter: blur(5px);
+    border: 1px solid rgba(255, 255, 255, 0.2);
+    margin-bottom: 0.5rem;
+}
+
+.resumed-collapsible-header:hover {
+    background: rgba(255, 255, 255, 0.15);
+}
+
+.resumed-details-text {
+    font-size: 1rem;
+    font-weight: 500;
+    color: white;
+}
+
+.resumed-collapsible-content {
+    overflow: hidden;
+    transition: max-height 0.3s ease, opacity 0.3s ease;
+    opacity: 0;
+    max-height: 0;
+    text-align: left;
+}
+
+.resumed-collapsible-content.expanded {
+    opacity: 1;
+    max-height: 300px;
+    margin-top: 0.5rem;
+}
+
+.resumed-experience-context {
+    background: rgba(255, 255, 255, 0.1);
+    border-radius: 12px;
+    padding: 1.5rem;
+    text-align: left;
+}
+
+.resumed-experience-context > p {
+    margin: 0 0 1rem 0;
+    background: rgba(255, 255, 255, 0.1);
+    padding: 1rem;
+    border-radius: 8px;
+    font-style: italic;
+    line-height: 1.5;
+}
+
+.resumed-instructions {
+    border-top: 1px solid rgba(255, 255, 255, 0.2);
+    padding-top: 1rem;
+}
+
+.resumed-instructions p {
+    margin: 0;
+    text-align: center;
+    font-weight: 500;
+    color: rgba(255, 255, 255, 0.95);
 }
 
 .chat-container {
@@ -497,6 +706,48 @@ function getCookie(name) {
 
 const csrfToken = getCookie('csrftoken');
 
+// Toggle How It Works section
+function toggleHowItWorks() {
+    const content = document.getElementById('howItWorksContent');
+    const toggle = document.getElementById('howItWorksToggle');
+
+    if (content.style.display === 'none' || !content.classList.contains('expanded')) {
+        content.style.display = 'block';
+        content.classList.add('expanded');
+        toggle.classList.add('expanded');
+    } else {
+        content.classList.remove('expanded');
+        toggle.classList.remove('expanded');
+        // Hide after animation completes
+        setTimeout(() => {
+            if (!content.classList.contains('expanded')) {
+                content.style.display = 'none';
+            }
+        }, 300);
+    }
+}
+
+// Toggle Resumed Details section
+function toggleResumedDetails() {
+    const content = document.getElementById('resumedContent');
+    const toggle = document.getElementById('resumedToggle');
+
+    if (content.style.display === 'none' || !content.classList.contains('expanded')) {
+        content.style.display = 'block';
+        content.classList.add('expanded');
+        toggle.classList.add('expanded');
+    } else {
+        content.classList.remove('expanded');
+        toggle.classList.remove('expanded');
+        // Hide after animation completes
+        setTimeout(() => {
+            if (!content.classList.contains('expanded')) {
+                content.style.display = 'none';
+            }
+        }, 300);
+    }
+}
+
 function displayMessage(role, content, timestamp = null) {
     const messagesContainer = document.getElementById('chat-messages');
 
@@ -554,6 +805,61 @@ function showCompletionSuggestion(suggestion) {
     suggestionDiv.style.display = 'block';
 }
 
+// Load resumed conversation with history
+async function loadResumedConversation(conversationId) {
+    try {
+        // Show loading
+        displayMessage('assistant', '🔄 Loading your conversation history...');
+
+        // Set the current conversation ID
+        currentConversationId = conversationId;
+
+        // Get conversation history
+        const historyResponse = await fetch(`/conversations/${conversationId}/history/`);
+        const historyData = await historyResponse.json();
+
+        if (historyData.success) {
+            // Clear previous messages
+            document.getElementById('chat-messages').innerHTML = '';
+
+            // Display conversation history
+            historyData.message_history.forEach(message => {
+                displayMessage(message.role, message.content, message.timestamp);
+            });
+
+            // Add resumption message
+            displayMessage('assistant', '✅ Conversation loaded! Continue adding more details about your experience. What additional context would you like to share?');
+
+            // Enable controls
+            document.getElementById('user-message').disabled = false;
+            document.getElementById('send-btn').disabled = false;
+            document.querySelector('.pause-btn').disabled = false;
+            document.querySelector('.experience-btn').disabled = false;
+            document.querySelector('.status-btn').disabled = false;
+
+            // Update the resume button text
+            const resumeBtn = document.querySelector('.start-btn');
+            resumeBtn.innerHTML = '<span class="btn-icon">✅</span>History Loaded';
+            resumeBtn.disabled = true;
+
+            // Update status
+            updateStatus({
+                status: 'resumed',
+                message_count: historyData.message_history.length,
+                updated_at: new Date().toISOString()
+            });
+
+            // Focus on message input
+            document.getElementById('user-message').focus();
+        } else {
+            showError('Failed to load conversation history: ' + historyData.error);
+        }
+    } catch (error) {
+        console.error('Error loading resumed conversation:', error);
+        showError('Failed to load conversation: ' + error.message);
+    }
+}
+
 async function startNewConversation() {
     try {
         const response = await fetch('/conversations/start/', {
@@ -583,6 +889,11 @@ async function startNewConversation() {
             document.querySelector('.pause-btn').disabled = false;
             document.querySelector('.experience-btn').disabled = false;
             document.querySelector('.status-btn').disabled = false;
+
+            // Update the start button text
+            const startBtn = document.querySelector('.start-btn');
+            startBtn.innerHTML = '<span class="btn-icon">✅</span>Conversation Started';
+            startBtn.disabled = true;
 
             updateStatus({
                 status: 'active',
@@ -706,7 +1017,13 @@ async function createExperience() {
 
     try {
         // First, complete the conversation to get the final summary
-        displayMessage('assistant', '⏳ Completing conversation and generating experience summary...');
+        const isResumed = {% if is_resumed %}true{% else %}false{% endif %};
+
+        if (isResumed) {
+            displayMessage('assistant', '⏳ Updating your experience with additional context...');
+        } else {
+            displayMessage('assistant', '⏳ Completing conversation and generating experience summary...');
+        }
 
         const completeResponse = await fetch(`/conversations/${currentConversationId}/complete/`, {
             method: 'POST',
@@ -720,7 +1037,11 @@ async function createExperience() {
         const completeData = await completeResponse.json();
 
         if (completeData.success) {
-            displayMessage('assistant', '✅ Conversation completed! Redirecting to create experience...');
+            if (isResumed) {
+                displayMessage('assistant', '✅ Experience updated with new context! Redirecting to review changes...');
+            } else {
+                displayMessage('assistant', '✅ Conversation completed! Redirecting to create experience...');
+            }
 
             // Disable controls
             document.getElementById('user-message').disabled = true;
@@ -766,6 +1087,22 @@ const observer = new MutationObserver(function(mutations) {
 document.addEventListener('DOMContentLoaded', function() {
     const chatMessages = document.getElementById('chat-messages');
     observer.observe(chatMessages, { childList: true });
+
+    // Auto-trigger conversation based on page context
+    const isResumed = {% if is_resumed %}true{% else %}false{% endif %};
+    const conversationId = {% if conversation %}'{{ conversation.conversation_id }}'{% else %}null{% endif %};
+
+    if (isResumed && conversationId) {
+        // Automatically load conversation history for resumed conversations
+        setTimeout(() => {
+            loadResumedConversation(conversationId);
+        }, 500);
+    } else {
+        // Automatically start new conversation for fresh sessions
+        setTimeout(() => {
+            startNewConversation();
+        }, 500);
+    }
 });
 </script>
 {% endblock %}

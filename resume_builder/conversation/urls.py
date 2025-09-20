@@ -23,4 +23,7 @@ urlpatterns = [
 
     # Experience Assistant page
     path('experience-assistant/', views.experience_assistant_page, name='experience_assistant'),
+
+    # Resume conversation
+    path('<uuid:conversation_id>/resume/', views.resume_conversation_page, name='resume_conversation'),
 ]

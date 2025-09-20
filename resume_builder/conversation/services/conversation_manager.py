@@ -67,11 +67,11 @@ class ConversationManager:
         except Conversation.DoesNotExist:
             raise ValueError(f"Conversation {conversation_id} does not exist")
         
-        if conversation.status not in ['active', 'paused']:
+        if conversation.status not in ['active', 'paused', 'resumable']:
             raise ValueError(f"Cannot add message to conversation with status: {conversation.status}")
-        
-        # If conversation was paused, reactivate it
-        if conversation.status == 'paused':
+
+        # If conversation was paused or resumable, reactivate it
+        if conversation.status in ['paused', 'resumable']:
             conversation.status = 'active'
             conversation.save(update_fields=['status', 'updated_at'])
         
@@ -156,14 +156,14 @@ class ConversationManager:
     def complete_conversation(conversation_id: str, experience_summary: str) -> bool:
         """
         Marks a conversation as completed with final experience summary
-        
+
         Args:
             conversation_id: UUID string of the conversation
             experience_summary: Final extracted experience summary
-            
+
         Returns:
             Success boolean
-            
+
         Raises:
             ValueError: If conversation doesn't exist or is already completed
         """
@@ -171,13 +171,70 @@ class ConversationManager:
             conversation = Conversation.objects.get(conversation_id=conversation_id)
         except Conversation.DoesNotExist:
             raise ValueError(f"Conversation {conversation_id} does not exist")
-        
+
         if conversation.status == 'completed':
             raise ValueError("Conversation is already completed")
-        
+
         conversation.mark_completed(summary=experience_summary)
-        
+
         logger.info(f"Completed conversation {conversation_id}")
+        return True
+
+    @staticmethod
+    def complete_conversation_with_experience(conversation_id: str, experience_summary: str) -> bool:
+        """
+        Marks a conversation as resumable after creating an experience
+        This allows users to return and add more context later
+
+        Args:
+            conversation_id: UUID string of the conversation
+            experience_summary: Extracted experience summary
+
+        Returns:
+            Success boolean
+
+        Raises:
+            ValueError: If conversation doesn't exist
+        """
+        try:
+            conversation = Conversation.objects.get(conversation_id=conversation_id)
+        except Conversation.DoesNotExist:
+            raise ValueError(f"Conversation {conversation_id} does not exist")
+
+        if conversation.status in ['completed', 'resumable']:
+            # Already processed, just update summary if needed
+            if experience_summary and experience_summary != conversation.experience_summary:
+                conversation.experience_summary = experience_summary
+                conversation.save(update_fields=['experience_summary', 'updated_at'])
+        else:
+            conversation.mark_resumable(summary=experience_summary)
+
+        logger.info(f"Marked conversation {conversation_id} as resumable with experience")
+        return True
+
+    @staticmethod
+    def resume_conversation(conversation_id: str) -> bool:
+        """
+        Resumes a resumable conversation for additional context
+
+        Args:
+            conversation_id: UUID string of the conversation
+
+        Returns:
+            Success boolean
+
+        Raises:
+            ValueError: If conversation doesn't exist or cannot be resumed
+        """
+        try:
+            conversation = Conversation.objects.get(conversation_id=conversation_id)
+        except Conversation.DoesNotExist:
+            raise ValueError(f"Conversation {conversation_id} does not exist")
+
+        if not conversation.resume_conversation():
+            raise ValueError(f"Cannot resume conversation with status: {conversation.status}")
+
+        logger.info(f"Resumed conversation {conversation_id}")
         return True
     
     @staticmethod

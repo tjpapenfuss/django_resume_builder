@@ -11,6 +11,7 @@ class Conversation(models.Model):
         ('active', 'Active'),
         ('completed', 'Completed'),
         ('paused', 'Paused'),
+        ('resumable', 'Resumable'),
     ]
     
     conversation_id = models.UUIDField(primary_key=True, default=uuid.uuid4, editable=False)
@@ -49,6 +50,30 @@ class Conversation(models.Model):
         if summary:
             self.experience_summary = summary
         self.save(update_fields=['status', 'experience_summary', 'updated_at'])
+
+    def mark_resumable(self, summary=None):
+        """Mark conversation as resumable (created experience but can continue)"""
+        self.status = 'resumable'
+        if summary:
+            self.experience_summary = summary
+        self.save(update_fields=['status', 'experience_summary', 'updated_at'])
+
+    def resume_conversation(self):
+        """Resume a conversation (regardless of current status)"""
+        # Allow resuming from any status
+        self.status = 'active'
+        self.save(update_fields=['status', 'updated_at'])
+        return True
+
+    @property
+    def is_resumable(self):
+        """Returns True if conversation can be resumed"""
+        return self.status == 'resumable'
+
+    @property
+    def created_experience(self):
+        """Get the experience created from this conversation (if any)"""
+        return self.experiences.first() if hasattr(self, 'experiences') else None
 
 
 class ConversationMessage(models.Model):

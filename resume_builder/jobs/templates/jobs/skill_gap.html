@@ -140,6 +140,7 @@
         <a href="{% url 'jobs:job_detail_extended' job.pk %}" class="btn btn-primary">Extended Job Details</a>
         <a href="{% url 'jobs:job_interview_assistant' job.pk %}" class="btn btn-primary">Interview Assistant</a>
         <a href="{% url 'experience:add_experience' %}?job_id={{ job.pk }}" class="btn btn-primary">Add General Experience</a>
+        <a href="{% url 'conversation:experience_assistant' %}" class="btn btn-primary">Continue Conversation</a>
     </div>
 
     <!-- Quick Experience Modal -->

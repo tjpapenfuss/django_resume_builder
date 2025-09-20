@@ -318,6 +318,42 @@ def experience_assistant_page(request):
 
 
 @login_required
+def resume_conversation_page(request, conversation_id):
+    """
+    Resume a conversation that was previously marked as resumable
+
+    GET /conversations/{conversation_id}/resume/
+    """
+    try:
+        # Verify conversation belongs to user and is resumable
+        from .models import Conversation
+        conversation = Conversation.objects.get(
+            conversation_id=conversation_id,
+            user=request.user
+        )
+
+        # Resume the conversation (regardless of status)
+        from .services.conversation_manager import ConversationManager
+        ConversationManager.resume_conversation(str(conversation_id))
+
+        # Create context for the conversation
+        context = {
+            'user': request.user,
+            'conversation': conversation,
+            'is_resumed': True,
+            'experience': conversation.created_experience
+        }
+
+        messages.success(request, f'Conversation resumed! Continue adding context to your experience: "{conversation.created_experience.title if conversation.created_experience else "your experience"}"')
+
+        return render(request, 'conversation/experience_assistant.html', context)
+
+    except Conversation.DoesNotExist:
+        messages.error(request, 'Conversation not found or access denied.')
+        return redirect('experience:experience')
+
+
+@login_required
 def create_experience_from_conversation(request, conversation_id):
     """
     Redirect to add experience page with conversation ID

@@ -139,14 +139,15 @@ class ConversationOrchestrator:
                 'conversation_status': 'error'
             }
     
-    def complete_conversation_with_summary(self, conversation_id: str, user_approved: bool = True) -> Dict:
+    def complete_conversation_with_summary(self, conversation_id: str, user_approved: bool = True, for_experience: bool = True) -> Dict:
         """
         Completes conversation with AI-generated summary
-        
+
         Args:
             conversation_id: UUID string of the conversation
             user_approved: Whether user approved the completion
-            
+            for_experience: Whether this completion is for creating an experience (makes it resumable)
+
         Returns:
             Dictionary with completion status and final summary
         """
@@ -156,24 +157,45 @@ class ConversationOrchestrator:
                     'success': False,
                     'error': 'User did not approve conversation completion'
                 }
-            
+
             # Get conversation history
             conversation_history = self.conversation_manager.get_conversation_for_ai(conversation_id)
-            
+
             # Generate comprehensive summary
             experience_summary = self.ai_service.generate_experience_summary(conversation_history)
-            
+
             # Complete conversation with summary
-            summary_text = experience_summary.get('narrative_summary', 
+            summary_text = experience_summary.get('narrative_summary',
                                                 str(experience_summary))
-            
-            self.conversation_manager.complete_conversation(conversation_id, summary_text)
-            
+
+            # Check if this conversation already has an experience (resumed conversation)
+            from ..models import Conversation
+            conversation = Conversation.objects.get(conversation_id=conversation_id)
+            existing_experience = conversation.experiences.first()
+
+            if for_experience:
+                if existing_experience:
+                    # This is a resumed conversation with existing experience
+                    # Mark as resumable again and update experience summary
+                    self.conversation_manager.complete_conversation_with_experience(conversation_id, summary_text)
+                    conversation_status = 'resumable'
+                    message = 'Experience updated with additional context - you can continue adding more details anytime'
+                else:
+                    # First time creating experience
+                    self.conversation_manager.complete_conversation_with_experience(conversation_id, summary_text)
+                    conversation_status = 'resumable'
+                    message = 'Conversation ready for experience creation - you can resume anytime to add more context'
+            else:
+                # Traditional completion
+                self.conversation_manager.complete_conversation(conversation_id, summary_text)
+                conversation_status = 'completed'
+                message = 'Conversation completed successfully'
+
             return {
                 'success': True,
-                'conversation_status': 'completed',
+                'conversation_status': conversation_status,
                 'experience_summary': experience_summary,
-                'message': 'Conversation completed successfully'
+                'message': message
             }
             
         except Exception as e:

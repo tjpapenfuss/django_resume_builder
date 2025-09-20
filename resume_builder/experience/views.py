@@ -88,19 +88,62 @@ def add_experience(request):
             
             # Link to conversation if conversation_id is provided
             conversation_id = request.POST.get('conversation_id', '')
+            existing_experience = None
+
             if conversation_id:
                 try:
                     from conversation.models import Conversation
                     conversation = Conversation.objects.get(
-                        conversation_id=conversation_id, 
+                        conversation_id=conversation_id,
                         user=request.user
                     )
-                    experience.conversation = conversation
+
+                    # Check if this conversation already has an experience
+                    existing_experience = conversation.experiences.first()
+
+                    if existing_experience:
+                        # Update existing experience instead of creating new one
+                        # Always use the form data (which includes the latest conversation summary from GET pre-fill)
+                        existing_experience.description = experience.description
+
+                        existing_experience.title = experience.title
+                        existing_experience.experience_type = experience.experience_type
+                        existing_experience.employment = experience.employment
+                        existing_experience.education = experience.education
+                        existing_experience.date_started = experience.date_started
+                        existing_experience.date_finished = experience.date_finished
+                        existing_experience.visibility = experience.visibility
+                        existing_experience.save()
+                        experience = existing_experience  # Use the updated experience
+
+                        # Mark conversation as resumable for future iterations
+                        from conversation.services.conversation_manager import ConversationManager
+                        ConversationManager.complete_conversation_with_experience(
+                            str(conversation.conversation_id),
+                            experience.description
+                        )
+
+                        messages.success(request, 'Experience updated with additional context from your conversation!')
+                    else:
+                        # Create new experience and link to conversation
+                        experience.conversation = conversation
+                        experience.save()
+
+                        # Mark conversation as resumable for future iterations
+                        from conversation.services.conversation_manager import ConversationManager
+                        ConversationManager.complete_conversation_with_experience(
+                            str(conversation.conversation_id),
+                            experience.description
+                        )
+
+                        messages.success(request, 'Experience created from your conversation!')
+
                 except Conversation.DoesNotExist:
                     # If conversation doesn't exist or doesn't belong to user, ignore
-                    pass
+                    experience.save()
+            else:
+                experience.save()
             print("found the saving. ")
-            experience.save()
             
             # Always run AI analysis and redirect to skill confirmation page
             return redirect('experience:analyze_experience_skills', experience_id=experience.experience_id)
@@ -119,10 +162,41 @@ def add_experience(request):
                 conversation = Conversation.objects.get(
                     conversation_id=conversation_id,
                     user=request.user,
-                    status='completed'  # Only use completed conversations
+                    status__in=['completed', 'resumable']  # Use completed or resumable conversations
                 )
-                
-                if conversation.experience_summary:
+
+                # Check if conversation already has an experience - if so, pre-fill with that data
+                existing_experience = conversation.experiences.first()
+                if existing_experience:
+                    # For resumed conversations, use the latest conversation summary for description
+                    # but keep other fields from existing experience
+                    description_to_use = existing_experience.description
+
+                    # If conversation has been updated (resumable status), use latest summary
+                    if conversation.status == 'resumable' and conversation.experience_summary:
+                        import json
+                        try:
+                            summary_data = json.loads(conversation.experience_summary)
+                            description_to_use = summary_data.get('narrative_summary', conversation.experience_summary)
+                        except json.JSONDecodeError:
+                            description_to_use = conversation.experience_summary
+
+                    # Pre-fill form with existing experience data but updated description
+                    initial_data = {
+                        'title': existing_experience.title,
+                        'description': description_to_use,
+                        'experience_type': existing_experience.experience_type,
+                        'employment': existing_experience.employment,
+                        'education': existing_experience.education,
+                        'date_started': existing_experience.date_started,
+                        'date_finished': existing_experience.date_finished,
+                        'visibility': existing_experience.visibility,
+                    }
+                    conversation_data = {
+                        'title': existing_experience.title,
+                        'summary': {'narrative_summary': description_to_use}
+                    }
+                elif conversation.experience_summary:
                     # Try to parse the summary if it's JSON
                     import json
                     try:
@@ -491,6 +565,11 @@ def analyze_experience_skills(request, experience_id):
     # Prepare skills data for template
     skills_data = prepare_skills_for_template(ai_analysis)
 
+    # Get conversation data if this experience came from a conversation
+    conversation = None
+    if experience.conversation:
+        conversation = experience.conversation
+
     context = {
         'experience': experience,
         'ai_analysis': ai_analysis,
@@ -498,6 +577,7 @@ def analyze_experience_skills(request, experience_id):
         'total_skills': sum(len(skills) for skills in skills_data.values()) if skills_data else 0,
         'from_quick_add': experience.was_quick_added,  # Add this to template context
         'target_job_info': experience.target_job_info,  # Add job info for context
+        'conversation': conversation,  # Add conversation data for resume button
     }
     
     return render(request, 'analyze_skills.html', context)
