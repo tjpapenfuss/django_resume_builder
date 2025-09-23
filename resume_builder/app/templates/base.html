@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>{% block title %}Resume Builder{% endblock %}</title>
+    <title>{% block title %}Interview Assistant{% endblock %}</title>
     <style>
         * {
             margin: 0;
@@ -597,7 +597,7 @@
             <!-- Logo -->
             <a href="{% url 'home' %}" class="logo">
                 <div class="logo-icon">📄</div>
-                <span>Resume Builder</span>
+                <span>Interview Assistant</span>
             </a>
 
             <!-- User Section -->
@@ -629,7 +629,7 @@
         <div class="nav-header">
             <a href="{% url 'home' %}" class="logo">
                 <div class="logo-icon">📄</div>
-                <span>Resume Builder</span>
+                <span>Interview Assistant</span>
             </a>
             {% if user.is_authenticated %}
                 <div class="nav-user-info">

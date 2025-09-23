@@ -1,6 +1,6 @@
 # Jobs App
 
-The Jobs app is a comprehensive job application tracking and analysis system for the Django Resume Builder project. It provides tools for scraping job postings, analyzing skill requirements, tracking application status, and preparing for interviews.
+The Jobs app is a comprehensive job application tracking and analysis system for the Django Interview Assistant project. It provides tools for scraping job postings, analyzing skill requirements, tracking application status, and preparing for interviews.
 
 ## Features
 

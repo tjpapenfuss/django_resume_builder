@@ -164,9 +164,9 @@ When conversations are completed, the AI generates structured summaries:
 }
 ```
 
-## Integration with Resume Builder
+## Integration with Interview Assistant
 
-The conversation system is designed to integrate with the existing resume builder:
+The conversation system is designed to integrate with the existing interview assistant:
 - Conversations are linked to user accounts
 - Generated summaries can be used to create Experience objects
 - Skills identified can be linked to the skills system

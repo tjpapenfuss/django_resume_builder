@@ -1,4 +1,4 @@
-# Django Resume Builder - Database ERD
+# Django Interview Assistant - Database ERD
 
 ```mermaid
 erDiagram
